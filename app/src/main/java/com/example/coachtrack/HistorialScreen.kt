@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 data class Sesion(
     val id: Int,
@@ -30,7 +31,7 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                 title = { Text("Historial de Sesiones") },
                 navigationIcon = {
                     IconButton(onClick = onVolverClick) {
-                        Text("ATRÁS")
+                        Text("Atrás", fontSize = 14.sp)
                     }
                 }
             )
