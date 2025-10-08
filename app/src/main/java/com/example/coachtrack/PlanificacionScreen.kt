@@ -13,16 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanificacionScreen(
     onVolverClick: () -> Unit
 ) {
-    // Estado de los ejercicios añadidos a la sesión
     val ejerciciosSesion = remember { mutableStateListOf<Plantilla>() }
+    val onRemoveEjercicio: (Plantilla) -> Unit = { ejerciciosSesion.remove(it) }
 
-    val onRemoveEjercicio: (Plantilla) -> Unit = { plantilla ->
-        ejerciciosSesion.remove(plantilla)
-    }
+    /* 1️⃣ Estado para mostrar el detalle */
+    var plantillaSeleccionada by remember { mutableStateOf<Plantilla?>(null) }
 
     Scaffold(
         topBar = { TopAppBarPlanificacion(onVolverClick) }
@@ -67,9 +67,22 @@ fun PlanificacionScreen(
             }
 
             Text("Plantillas Rápidas Disponibles:", style = MaterialTheme.typography.titleMedium)
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(PLANTILLAS_MOCK, key = { it.id }) { plantilla ->
-                    PlantillaCard(plantilla) { ejerciciosSesion.add(plantilla) }
+
+            /* 2️⃣ Aquí va el cambio: mostramos detalle o la lista */
+            if (plantillaSeleccionada != null) {
+                PlantillaDetailScreen(
+                    plantilla = plantillaSeleccionada!!,
+                    onAdd = {
+                        ejerciciosSesion.add(plantillaSeleccionada!!)
+                        plantillaSeleccionada = null   // volver
+                    },
+                    onVolver = { plantillaSeleccionada = null }
+                )
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(getMockPlantillas(), key = { it.id }) { plantilla ->
+                        PlantillaCard(plantilla) { plantillaSeleccionada = plantilla }
+                    }
                 }
             }
 
@@ -87,6 +100,7 @@ fun PlanificacionScreen(
     }
 }
 
+/* ---------- Resto de funciones sin cambios ---------- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBarPlanificacion(onVolverClick: () -> Unit) {

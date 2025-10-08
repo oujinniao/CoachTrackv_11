@@ -83,6 +83,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
     implementation("androidx.compose.runtime:runtime-livedata")
 
+    //Coil
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
