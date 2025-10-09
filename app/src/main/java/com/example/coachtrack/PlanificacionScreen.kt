@@ -13,16 +13,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+// Importamos la función para obtener los datos de Data.kt
+import com.example.coachtrack.getMockPlantillas
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanificacionScreen(
     onVolverClick: () -> Unit
 ) {
+    // Llama directamente a la función de Data.kt para obtener la lista
+    val plantillasDisponibles = getMockPlantillas()
+
     val ejerciciosSesion = remember { mutableStateListOf<Plantilla>() }
     val onRemoveEjercicio: (Plantilla) -> Unit = { ejerciciosSesion.remove(it) }
 
-    /* 1️⃣ Estado para mostrar el detalle */
     var plantillaSeleccionada by remember { mutableStateOf<Plantilla?>(null) }
+
+    var mostrarCartera by remember { mutableStateOf(false) }
+    var mostrarVideo by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopAppBarPlanificacion(onVolverClick) }
@@ -68,20 +76,25 @@ fun PlanificacionScreen(
 
             Text("Plantillas Rápidas Disponibles:", style = MaterialTheme.typography.titleMedium)
 
-            /* 2️⃣ Aquí va el cambio: mostramos detalle o la lista */
+            // Lógica de navegación del detalle (manteniendo el esqueleto)
             if (plantillaSeleccionada != null) {
-                PlantillaDetailScreen(
-                    plantilla = plantillaSeleccionada!!,
-                    onAdd = {
-                        ejerciciosSesion.add(plantillaSeleccionada!!)
-                        plantillaSeleccionada = null   // volver
-                    },
-                    onVolver = { plantillaSeleccionada = null }
-                )
+                // Aquí iría PlantillaDetailScreen
+                Text("Mostrando detalle de: ${plantillaSeleccionada!!.nombre}", color = MaterialTheme.colorScheme.primary)
+                Button(onClick = { ejerciciosSesion.add(plantillaSeleccionada!!); plantillaSeleccionada = null }) {
+                    Text("Añadir y Volver")
+                }
+                Button(onClick = { plantillaSeleccionada = null }) {
+                    Text("Volver a la Lista")
+                }
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(getMockPlantillas(), key = { it.id }) { plantilla ->
-                        PlantillaCard(plantilla) { plantillaSeleccionada = plantilla }
+                    // Usa la lista cargada con la función de Data.kt
+                    items(plantillasDisponibles, key = { it.id }) { plantilla ->
+                        PlantillaCard(
+                            plantilla = plantilla,
+                            onAdd = { ejerciciosSesion.add(plantilla) }, // Acción de añadir directo
+                            onDetailClick = { plantillaSeleccionada = it } // Acción de ver detalle
+                        )
                     }
                 }
             }
@@ -96,11 +109,41 @@ fun PlanificacionScreen(
             ) {
                 Text("GUARDAR Y VOLVER")
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            /* Botón CARTERA */
+            Button(
+                onClick = { mostrarCartera = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cartera")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            /* Botón VIDEO */
+            Button(
+                onClick = { mostrarVideo = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Video")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            /* NAVEGACIÓN - CORRECCIÓN CLAVE */
+            when {
+                mostrarCartera -> CarteraScreen(onVolver = { mostrarCartera = false })
+                mostrarVideo -> VideoScreen(onVolver = { mostrarVideo = false })
+                // ELIMINAMOS EL DEFAULT (else) PARA QUE NO RENDERICE LA CAMARA ENCIMA
+            }
         }
     }
 }
 
-/* ---------- Resto de funciones sin cambios ---------- */
+/* ---------- Resto de funciones ---------- */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBarPlanificacion(onVolverClick: () -> Unit) {
@@ -138,17 +181,36 @@ fun EjercicioAñadidoCard(plantilla: Plantilla, onRemove: (Plantilla) -> Unit) {
     }
 }
 
+// CORRECCIÓN DE PLANTILLACARD CON DETALLE Y AÑADIR
 @Composable
-fun PlantillaCard(plantilla: Plantilla, onAdd: () -> Unit) {
+fun PlantillaCard(plantilla: Plantilla, onAdd: () -> Unit, onDetailClick: (Plantilla) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable { onAdd() }
+            .clickable { onDetailClick(plantilla) } // Clic principal abre detalle
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(plantilla.nombre, style = MaterialTheme.typography.bodyMedium)
-            Text("${plantilla.duracionMinutos} min - ${plantilla.enfoque}", style = MaterialTheme.typography.bodySmall)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(plantilla.nombre, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "${plantilla.duracionMinutos} min - ${plantilla.enfoque}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            // Botón para añadir el ejercicio (no activa el detalle)
+            Button(onClick = onAdd) {
+                Text("Añadir")
+            }
         }
     }
 }
+

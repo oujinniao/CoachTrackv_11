@@ -6,6 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.coachtrack.CamaraScreen
+import com.example.coachtrack.CarteraScreen
+import com.example.coachtrack.VideoScreen
+
 
 // Importamos las pantallas
 import com.example.coachtrack.PantallaPrincipal
@@ -57,6 +61,24 @@ fun AppNavigation(firebaseManager: FakeFirebaseManager) {
         is Screen.VideoAnalisis -> {
             VideoAnalisisScreen(
                 onVolverClick = { currentScreen = Screen.Principal }
+            )
+
+        }
+        is Screen.Camara -> {
+            CamaraScreen(
+                onVolverClick = { currentScreen = Screen.Principal }
+            )
+        }
+
+        is Screen.Cartera -> {
+            CarteraScreen(
+                onVolver = { currentScreen = Screen.Principal }
+            )
+        }
+
+        is Screen.Video -> {
+            VideoScreen(
+                onVolver = { currentScreen = Screen.Principal }
             )
         }
     }

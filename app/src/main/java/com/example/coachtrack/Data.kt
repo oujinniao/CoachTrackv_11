@@ -3,6 +3,7 @@ package com.example.coachtrack
 import androidx.compose.runtime.mutableStateListOf
 
 // Lista predefinida de plantillas (las bibliotecas de ejercicios)
+
 fun getMockPlantillas(): List<Plantilla> {
     return listOf(
         Plantilla(
@@ -36,8 +37,17 @@ fun getMockPlantillas(): List<Plantilla> {
             duracionMinutos = 15,
             descripcion = "Estiramientos estáticos y suaves para bajar el ritmo cardíaco y reducir la tensión muscular después del entrenamiento. Foco en isquiotibiales, cuádriceps y espalda baja. Es obligatorio para prevenir el dolor post-ejercicio.",
             imageUrl = "https://placehold.co/400x200/9C27B0/white?text=IMAGEN+CIERRE"
+        ),
+        Plantilla(
+            id = "p5",
+            nombre = "Ejercicio de Top Spin",
+            enfoque = "Técnica Avanzada",
+            duracionMinutos = 45,
+            descripcion="técnica de golpeo que imprime a la pelota un giro hacia adelante, haciendo que caiga más rápido y rebote con mayor fuerza y de forma brusca",
+            imageUrl = "https://www.google.com/search?sca_esv=fa0d648ec49d7a9f&rlz=1C1ALOY_esCL1040CL1040&udm=2&fbs=AIIjpHx4nJjfGojPVHhEACUHPiMQht6_BFq6vBIoFFRK7qchKEWEvuc0Hbw31oEI7c8o3y7EH2T73cHYgsE1-NZATxMpGR5vj5F1FSpJQGl9M4am3709kXxFlYHA-KUl_i_ojuEnb6fHvj4RwUjPRK_auW2s8c0Zn9pt-DWsDQeXfe08jKu9U7SSlNGqUaPOk78TJ0i4PytRrDvtRyDBV7LdCZ7ej7eBOYIWUoFLvDoxyUzeSH8rY_w&q=definicion+de+topspin+en+tenis%2Burl&sa=X&ved=2ahUKEwiI_aWb-5WQAxX1qpUCHXAAIAkQtKgLegQIFhAB&biw=1536&bih=703&dpr=1.25#vhid=rpra0c4efC3HeM&vssid=mosaic",
         )
     )
+
 }
 
 // Inicializa el historial con la primera sesión predefinida
