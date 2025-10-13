@@ -11,17 +11,17 @@ import androidx.compose.ui.unit.dp
 fun AppNavigation(firebaseManager: FakeFirebaseManager) {
     val firestoreState by firebaseManager.firestoreState
 
-    // 🔹 1. Si no está autenticado → mostrar pantalla de inicio
+    // 🔹 1. Si no está autenticado → mostrar pantalla de inicio (Bienvenida)
     if (!firestoreState.isAuthenticated) {
-        PantallaInicio(
-            onEntrarClick = {
-                firebaseManager.loginDemo() // Simula inicio de sesión
+        SplashScreen(
+            onSplashFinished = {
+                firebaseManager.loginDemo() // Simula el login después del splash
             }
         )
         return
     }
 
-    // 🔹 2. Si ya está autenticado → continuar navegación normal
+    // 🔹 2. Si ya está autenticado → continuar con la navegación normal
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Principal) }
 
     when (currentScreen) {
@@ -103,11 +103,11 @@ fun AppNavigation(firebaseManager: FakeFirebaseManager) {
             )
         }
 
-        // -------------------- PANTALLA DE INICIO --------------------
+        // -------------------- SPLASH DE BIENVENIDA --------------------
         is Screen.Inicio -> {
-            PantallaInicio(
-                onEntrarClick = {
-                    firebaseManager.loginDemo()
+            SplashScreen(
+                onSplashFinished = {
+                    currentScreen = Screen.Principal
                 }
             )
         }
