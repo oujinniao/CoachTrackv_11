@@ -3,13 +3,21 @@ package com.example.coachtrack
 data class Alumnos(
     val id: String,
     val nombre: String,
+    val nivel: String,
+    val objetivo: String?,
     val clasesPactadas: Int,
     val clasesCursadas: Int,
     val estadoPago: EstadoPago,
-    var notasEntrenador: String = ""
-
-
-
-)
+    var notasEntrenador: String = "",
+    val fechaInicio: String? = null,
+    val sesiones: List<Sesion> = emptyList(),
+    val tacticas: List<Tactica> = emptyList()
+) {
+    val progreso: Int
+        get() = if (clasesPactadas > 0)
+            (clasesCursadas * 100) / clasesPactadas
+        else 0
+}
 
 enum class EstadoPago { ADELANTADO, PENDIENTE, DEUDA }
+

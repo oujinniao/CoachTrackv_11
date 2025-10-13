@@ -1,6 +1,7 @@
 package com.example.coachtrack
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,20 +23,19 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarteraScreen(
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    onAbrirFichaAlumno: (Alumnos) -> Unit
 ) {
-    // Alumnos (Manteniendo el Mock para la demostración)
     val alumnos = remember {
         mutableStateListOf(
-            Alumnos("a1", "Juan Pérez", 8, 5, EstadoPago.PENDIENTE),
-            Alumnos("a2", "María López", 10, 10, EstadoPago.DEUDA),
-            Alumnos("a3", "Carlos Ruiz", 6, 2, EstadoPago.ADELANTADO),
-            Alumnos("a4", "Laura Martínez", 12, 11, EstadoPago.PENDIENTE),
-            Alumnos("a5", "Felipe Gómez", 5, 0, EstadoPago.ADELANTADO)
+            Alumnos("a1", "Juan Pérez", "Intermedio", "Mejorar saque", 8, 5, EstadoPago.PENDIENTE),
+            Alumnos("a2", "María López", "Avanzado", "Competencia regional", 10, 10, EstadoPago.DEUDA),
+            Alumnos("a3", "Carlos Ruiz", "Inicial", "Consistencia de revés", 6, 2, EstadoPago.ADELANTADO),
+            Alumnos("a4", "Laura Martínez", "Intermedio", "Velocidad de desplazamiento", 12, 11, EstadoPago.PENDIENTE),
+            Alumnos("a5", "Felipe Gómez", "Inicial", "Aprender técnica de saque", 5, 0, EstadoPago.ADELANTADO)
         )
     }
 
-    // Calculamos el resumen para el encabezado
     val totalDeuda = remember {
         derivedStateOf { alumnos.count { it.estadoPago == EstadoPago.DEUDA || it.estadoPago == EstadoPago.PENDIENTE } }
     }
@@ -58,7 +58,7 @@ fun CarteraScreen(
                 .padding(pv)
                 .padding(horizontal = 16.dp)
         ) {
-            // Nuevo: Tarjeta de Resumen Rápido (Control del dinero)
+            // Tarjeta de resumen rápido
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -83,7 +83,7 @@ fun CarteraScreen(
                 }
             }
 
-
+            // Lista de alumnos
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(alumnos, key = { it.id }) { alumno ->
                     AlumnoCard(
@@ -93,7 +93,8 @@ fun CarteraScreen(
                                 val index = alumnos.indexOf(alumno)
                                 alumnos[index] = alumno.copy(
                                     clasesCursadas = alumno.clasesCursadas + 1,
-                                    estadoPago = if (alumno.clasesCursadas + 1 >= alumno.clasesPactadas) EstadoPago.PENDIENTE else alumno.estadoPago
+                                    estadoPago = if (alumno.clasesCursadas + 1 >= alumno.clasesPactadas)
+                                        EstadoPago.PENDIENTE else alumno.estadoPago
                                 )
                             }
                         },
@@ -102,8 +103,10 @@ fun CarteraScreen(
                             alumnos[index] = alumno.copy(estadoPago = EstadoPago.ADELANTADO)
                         },
                         onContactoRapido = {
-                            // Simulacion de accion WSP
                             println("Simulando envío de mensaje de WhatsApp a ${alumno.nombre} por pago pendiente.")
+                        },
+                        onAbrirFichaAlumno = {
+                            onAbrirFichaAlumno(alumno)
                         }
                     )
                 }
@@ -126,7 +129,8 @@ fun AlumnoCard(
     alumno: Alumnos,
     onClaseDada: () -> Unit,
     onPagoRegistrar: () -> Unit,
-    onContactoRapido: () -> Unit // Nueva funcion para el boton de contacto
+    onContactoRapido: () -> Unit,
+    onAbrirFichaAlumno: (Alumnos) -> Unit
 ) {
     val clasesRestantes = alumno.clasesPactadas - alumno.clasesCursadas
     val colorEstado = when (alumno.estadoPago) {
@@ -139,13 +143,13 @@ fun AlumnoCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
+            .clickable { onAbrirFichaAlumno(alumno) } // 👈 abre ficha al tocar
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(alumno.nombre, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
 
-                    // Nuevo: Contador de Clases con progreso
                     LinearProgressIndicator(
                         progress = { alumno.clasesCursadas.toFloat() / alumno.clasesPactadas.toFloat() },
                         modifier = Modifier
@@ -161,10 +165,8 @@ fun AlumnoCard(
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp)
                     )
-
                 }
 
-                // Indicador de Estado de Pago (grande y visible)
                 Column(
                     modifier = Modifier.width(60.dp),
                     horizontalAlignment = Alignment.End
@@ -186,7 +188,6 @@ fun AlumnoCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Fila de acciones (Clase dada, Pagar, Contacto Rápido)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onClaseDada,
@@ -208,7 +209,6 @@ fun AlumnoCard(
                     Text("Pagar")
                 }
 
-                // Nuevo: Botón de Contacto Rápido
                 if (alumno.estadoPago == EstadoPago.DEUDA || alumno.estadoPago == EstadoPago.PENDIENTE) {
                     IconButton(
                         onClick = onContactoRapido,

@@ -1,6 +1,8 @@
 package com.example.coachtrack
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,7 +15,8 @@ fun PantallaPrincipal(
     onPlanificarClick: () -> Unit,
     onHistorialClick: () -> Unit,
     onVideoAnalisisClick: () -> Unit,
-    userId: String
+    userId: String,
+    firebaseManager: FakeFirebaseManager
 ) {
     Scaffold(
         topBar = { TopAppBarPrincipal() }
@@ -26,6 +29,7 @@ fun PantallaPrincipal(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
+            // Tarjeta con datos del entrenador
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -35,12 +39,17 @@ fun PantallaPrincipal(
                     Text("Prof. Alejandro González", style = MaterialTheme.typography.titleLarge)
                     Text("Academia Central de Tenis", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("ID Usuario: $userId", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                    Text(
+                        "ID Usuario: $userId",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Botones principales
             BotonFuncionalidad("PLANIFICAR SESIÓN", "Crea tu clase en 2 clics", onPlanificarClick)
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -48,6 +57,22 @@ fun PantallaPrincipal(
             Spacer(modifier = Modifier.height(16.dp))
 
             BotonFuncionalidad("VIDEO ANÁLISIS RÁPIDO", "Graba y envía feedback visual", onVideoAnalisisClick)
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // 🔴 Botón de Cerrar Sesión (Simulado)
+            OutlinedButton(
+                onClick = { firebaseManager.logout() },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+            ) {
+                Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
+                Spacer(Modifier.width(8.dp))
+                Text("Cerrar sesión", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.example.coachtrack
 
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,23 +19,22 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID // <-- ¡ESTA ES LA LÍNEA CRÍTICA QUE FALTABA!
+import java.util.UUID
 
-// Importamos las pantallas
-import com.example.coachtrack.CarteraScreen
-import com.example.coachtrack.VideoScreen
-
-// Estados de Navegación dentro de PlanificacionScreen
+// -------------------- ESTADOS DE NAVEGACIÓN --------------------
 enum class PlanificacionState {
-    PRINCIPAL, CARTERA, VIDEO, FICHA_TECNICA
+    PRINCIPAL,
+    CARTERA,
+    VIDEO,
+    FICHA_ALUMNO,  // 🔹 Nuevo estado para mostrar FichaAlumnoScreen
+    FICHA_TECNICA,
+    MINI_PLANIFICACION
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanificacionScreen(onVolverClick: () -> Unit) {
-    // ESTADOS DE LA SESIÓN Y NAVEGACIÓN
     var currentState by remember { mutableStateOf(PlanificacionState.PRINCIPAL) }
-    // Esta lista debe ser mutableStateListOf para observar cambios y evitar el crash.
     val ejerciciosSesion = remember { mutableStateListOf<Plantilla>() }
     var plantillaSeleccionada by remember { mutableStateOf<Plantilla?>(null) }
     var alumnoSeleccionado by remember { mutableStateOf<Alumnos?>(null) }
@@ -44,12 +42,9 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Lógica para guardar la sesión
-    // La función debe estar tipada como () -> Unit para evitar el error de compilación.
+    // -------------------- LÓGICA DE GUARDADO --------------------
     val onGuardarSesion: () -> Unit = {
         if (alumnoSeleccionado != null && ejerciciosSesion.isNotEmpty()) {
-
-            // **PASO CRÍTICO AÑADIDO:** Formatear la fecha a un String seguro
             val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm")
             val fechaGuardado = LocalDateTime.now().format(formatter)
 
@@ -57,13 +52,11 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
             val nuevaSesion = SesionDeClase(
                 sessionId = nuevoSessionId,
                 alumnoNombre = alumnoSeleccionado!!.nombre,
-                // Usamos la cadena de texto segura y formateada
                 fechaCreacion = fechaGuardado,
                 duracionTotalMinutos = ejerciciosSesion.sumOf { it.duracionMinutos },
-                // Mantenemos la corrección de lista para evitar duplicados y errores
                 ejercicios = ejerciciosSesion.toList().toMutableList()
             )
-            // ... (El resto del código de Snackbar y limpieza sigue igual)
+
             getMockSesionesGuardadas().add(0, nuevaSesion)
 
             val nombreAlumno = alumnoSeleccionado!!.nombre
@@ -73,6 +66,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                     duration = SnackbarDuration.Short
                 )
             }
+
             ejerciciosSesion.clear()
             alumnoSeleccionado = null
             currentState = PlanificacionState.PRINCIPAL
@@ -87,7 +81,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
         }
     }
 
-    // El Box contiene toda la pantalla y permite superponer las vistas de navegación
+    // -------------------- INTERFAZ PRINCIPAL --------------------
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
@@ -98,7 +92,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                             Icon(Icons.Default.List, contentDescription = "Volver al Menú")
                         }
                     }
-                    // Botones de acción eliminados de aquí (UX mejorado)
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -109,15 +102,14 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                     .padding(pv)
                     .padding(horizontal = 16.dp)
             ) {
-                // 1. Selección de Alumno (Fijo)
+                // ---- SELECCIÓN DE ALUMNO ----
                 AlumnoSelector(
                     alumnoSeleccionado = alumnoSeleccionado,
                     alumnos = remember { getMockAlumnos() },
-                    // FIX FINAL: Asegura que el estado del alumno seleccionado se actualice correctamente.
                     onAlumnoSelected = { alumnoSeleccionado = it }
                 )
 
-                // 2. Panel de Ejercicios (Scrollable)
+                // ---- EJERCICIOS ----
                 Text(
                     "Ejercicios de la Sesión (${ejerciciosSesion.size}):",
                     style = MaterialTheme.typography.titleMedium,
@@ -128,17 +120,13 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // FIX CLAVE: Usamos 'instanceId' como clave única para evitar el crash al añadir duplicados.
                     items(ejerciciosSesion, key = { it.instanceId }) { ejercicio ->
                         EjercicioCard(
                             plantilla = ejercicio,
-                            onRemove = {
-                                ejerciciosSesion.remove(ejercicio)
-                            }
+                            onRemove = { ejerciciosSesion.remove(ejercicio) }
                         )
                     }
 
-                    // Lista de Plantillas disponibles
                     item {
                         Divider(Modifier.padding(vertical = 8.dp))
                         Text(
@@ -151,7 +139,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                         PlantillaCard(
                             plantilla = plantilla,
                             onAdd = {
-                                // Navega a la ficha técnica
                                 plantillaSeleccionada = plantilla
                                 currentState = PlanificacionState.FICHA_TECNICA
                             }
@@ -159,14 +146,13 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                     }
                 }
 
-                // 3. Botones Auxiliares (Cartera y Video) - MOVIDOS ABAJO (Mejora UX)
+                // ---- BOTONES SECUNDARIOS ----
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // Botón Cartera
                     Button(
                         onClick = { currentState = PlanificacionState.CARTERA },
                         modifier = Modifier.weight(1f).padding(end = 8.dp)
@@ -176,7 +162,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                         Text("Cartera")
                     }
 
-                    // Botón Video Análisis
                     Button(
                         onClick = { currentState = PlanificacionState.VIDEO },
                         modifier = Modifier.weight(1f).padding(start = 8.dp)
@@ -187,9 +172,9 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                     }
                 }
 
-                // 4. Botón de Acción Fijo (Guardar)
+                // ---- BOTÓN GUARDAR ----
                 Button(
-                    onClick = { onGuardarSesion() }, // Llamada segura a la función de guardado
+                    onClick = { onGuardarSesion() },
                     enabled = alumnoSeleccionado != null && ejerciciosSesion.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -201,36 +186,63 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
             }
         }
 
-        // CONTROL DE NAVEGACIÓN SOBREPUESTA (Modal/Full Screen)
+        // -------------------- SUBPANTALLAS --------------------
         when (currentState) {
             PlanificacionState.CARTERA -> CarteraScreen(
-                onVolver = { currentState = PlanificacionState.PRINCIPAL }
+                onVolver = { currentState = PlanificacionState.PRINCIPAL },
+                onAbrirFichaAlumno = { alumno ->
+                    alumnoSeleccionado = alumno
+                    currentState = PlanificacionState.FICHA_ALUMNO
+                }
             )
+
             PlanificacionState.VIDEO -> VideoScreen(
                 onVolver = { currentState = PlanificacionState.PRINCIPAL }
             )
+
+            PlanificacionState.FICHA_ALUMNO -> {
+                alumnoSeleccionado?.let { alumno ->
+                    FichaAlumnoScreen(
+                        alumnoInicial = alumno,
+                        onVolver = { currentState = PlanificacionState.CARTERA },
+                        onNuevaSesionClick = {
+                            alumnoSeleccionado = it
+                            currentState = PlanificacionState.MINI_PLANIFICACION
+                        }
+                    )
+                }
+            }
+            PlanificacionState.MINI_PLANIFICACION -> {
+                alumnoSeleccionado?.let { alumno ->
+                    MiniPlanificacionScreen(
+                        alumno = alumno,
+                        onVolver = { currentState = PlanificacionState.FICHA_ALUMNO }
+                    )
+                }
+            }
+
             PlanificacionState.FICHA_TECNICA -> {
                 plantillaSeleccionada?.let { plantilla ->
-                    // Creamos una nueva instancia de la plantilla (con instanceId único)
                     val nuevaInstancia = plantilla.copy(instanceId = UUID.randomUUID().toString())
                     PlantillaDetailScreen(
                         plantilla = nuevaInstancia,
                         onAdd = {
-                            // Usamos la nueva instancia única para añadirla a la lista
                             ejerciciosSesion.add(nuevaInstancia)
                             currentState = PlanificacionState.PRINCIPAL
-                            plantillaSeleccionada = null // Limpia después de usar
+                            plantillaSeleccionada = null
                         },
                         onVolver = { currentState = PlanificacionState.PRINCIPAL }
                     )
                 }
             }
-            PlanificacionState.PRINCIPAL -> { /* No se superpone nada */ }
+
+            PlanificacionState.PRINCIPAL -> { /* Pantalla base */ }
         }
     }
 }
 
-// Componente para seleccionar alumno
+// -------------------- COMPONENTES AUXILIARES --------------------
+
 @Composable
 fun AlumnoSelector(
     alumnoSeleccionado: Alumnos?,
@@ -256,6 +268,7 @@ fun AlumnoSelector(
                 style = MaterialTheme.typography.titleMedium
             )
         }
+
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
@@ -274,7 +287,6 @@ fun AlumnoSelector(
     }
 }
 
-// Card de ejercicio ya añadido a la sesión
 @Composable
 fun EjercicioCard(
     plantilla: Plantilla,
@@ -304,7 +316,6 @@ fun EjercicioCard(
     }
 }
 
-// Card de plantilla para añadir
 @Composable
 fun PlantillaCard(
     plantilla: Plantilla,

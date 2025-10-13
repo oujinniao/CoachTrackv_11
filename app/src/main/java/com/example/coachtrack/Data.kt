@@ -1,6 +1,5 @@
 package com.example.coachtrack
 
-
 import java.util.UUID
 
 // ------------------ ESTRUCTURAS DE DATOS ------------------
@@ -12,97 +11,105 @@ data class Plantilla(
     val duracionMinutos: Int,
     val descripcion: String,
     val imageUrl: String,
-    val instanceId:String = UUID.randomUUID().toString() // Usamos UUID importado
+    val instanceId: String = UUID.randomUUID().toString()
 ) {
-    fun toMap(): Map<String, Any> {
-        return mapOf(
-            "id" to id,
-            "nombre" to nombre,
-            "enfoque" to enfoque,
-            "duracionMinutos" to duracionMinutos,
-            "descripcion" to descripcion,
-            "imageUrl" to imageUrl
-        )
-    }
+    fun toMap(): Map<String, Any> = mapOf(
+        "id" to id,
+        "nombre" to nombre,
+        "enfoque" to enfoque,
+        "duracionMinutos" to duracionMinutos,
+        "descripcion" to descripcion,
+        "imageUrl" to imageUrl
+    )
 }
 
+// ------------------ SESIÓN COMPLETA (para planificación) ------------------
 
 data class SesionDeClase(
     val sessionId: String,
     val userId: String = "PROTOTIPO_DEMO",
-    val fechaCreacion: String, // Usamos LocalDateTime para tener la fecha y hora exacta, dejamos fechaCreacion como String para simplificar
+    val fechaCreacion: String,
     val alumnoNombre: String,
     val duracionTotalMinutos: Int,
-    val ejercicios: MutableList<Plantilla>, // Esta es una lista mutable estándar
+    val ejercicios: MutableList<Plantilla>
 ) {
-    fun toMap(): Map<String, Any> {
-        return mapOf(
-            "userId" to userId,
-            "fecha" to fechaCreacion.toString(),
-            "alumno" to alumnoNombre,
-            "duracionTotalMinutos" to duracionTotalMinutos,
-            "ejercicios" to ejercicios.map { it.toMap() }
-        )
-    }
+    fun toMap(): Map<String, Any> = mapOf(
+        "userId" to userId,
+        "fecha" to fechaCreacion,
+        "alumno" to alumnoNombre,
+        "duracionTotalMinutos" to duracionTotalMinutos,
+        "ejercicios" to ejercicios.map { it.toMap() }
+    )
+}
+
+// ------------------ SESIÓN SIMPLE (para ficha de alumno) ------------------
+
+data class Sesion(
+    val id: String,          // identificador interno (sessionId en Data)
+    val titulo: String,      // nombre o tema de la sesión
+    val fecha: String,       // fecha de realización
+    val duracionMin: Int,    // duración en minutos
+    val estado: String       // estado (Completada, Pendiente, etc.)
+)
+
+// ------------------ CONVERSOR ENTRE TIPOS ------------------
+
+fun SesionDeClase.toSesion(): Sesion {
+    return Sesion(
+        id = sessionId,
+        titulo = ejercicios.firstOrNull()?.nombre ?: "Sesión sin título",
+        fecha = fechaCreacion,
+        duracionMin = duracionTotalMinutos,
+        estado = "Completada"
+    )
 }
 
 // ------------------ MOCK DATA Y HELPERS ------------------
 
-// Lista predefinida de plantillas (las bibliotecas de ejercicios)
-fun getMockPlantillas(): List<Plantilla> {
-    return listOf(
-        Plantilla(
-            id = "p1",
-            nombre = "Rutina de Calentamiento",
-            enfoque = "Prevención y Activación",
-            duracionMinutos = 10,
-            descripcion = "Secuencia dinámica para aumentar la temperatura corporal, preparar las articulaciones (tobillos, rodillas, hombros) y activar los grupos musculares principales antes de la práctica intensa. Incluye skipping, círculos de brazos y estiramientos dinámicos.",
-            imageUrl = "android.resource://com.example.coachtrack/drawable/calentamiento"
-        ),
-        Plantilla(
-            id = "p2",
-            nombre = "Drill de Saque Básico",
-            enfoque = "Técnica Fundamental",
-            duracionMinutos = 30,
-            descripcion = "Ejercicio centrado en la mecánica del lanzamiento de bola (Toss) y el punto de impacto. Se realizan 50 saques con énfasis en la fluidez del movimiento y la transferencia de peso. Ideal para corregir vicios iniciales.",
-            imageUrl = "https://placehold.co/400x200/2196F3/white?text=IMAGEN+DRILL+SAQUE"
-        ),
-        Plantilla(
-            id = "p3",
-            nombre = "Juego de Pies en la Red",
-            enfoque = "Movimiento y Agilidad",
-            duracionMinutos = 20,
-            descripcion = "Rutina de agilidad rápida cerca de la red, usando conos o marcas. Mejora la reacción y el ajuste del cuerpo para voleas y remates. Incluye pasos cruzados laterales y sprints cortos.",
-            imageUrl = "https://placehold.co/400x200/FFC107/black?text=IMAGEN+PIES+RED"
-        ),
-        Plantilla(
-            id = "p4",
-            nombre = "Ejercicios de Cierre (Cool Down)",
-            enfoque = "Recuperación y Flexibilidad",
-            duracionMinutos = 15,
-            descripcion = "Estiramientos estáticos y suaves para bajar el ritmo cardíaco y reducir la tensión muscular después del entrenamiento. Foco en isquiotibiales, cuádriceps y espalda baja. Es obligatorio para prevenir el dolor post-ejercicio.",
-            imageUrl = "https://placehold.co/400x200/9C27B0/white?text=IMAGEN+CIERRE"
-        )
+fun getMockPlantillas(): List<Plantilla> = listOf(
+    Plantilla(
+        id = "p1",
+        nombre = "Rutina de Calentamiento",
+        enfoque = "Prevención y Activación",
+        duracionMinutos = 10,
+        descripcion = "Secuencia dinámica para aumentar la temperatura corporal y preparar las articulaciones.",
+        imageUrl = "android.resource://com.example.coachtrack/drawable/calentamiento"
+    ),
+    Plantilla(
+        id = "p2",
+        nombre = "Drill de Saque Básico",
+        enfoque = "Técnica Fundamental",
+        duracionMinutos = 30,
+        descripcion = "Ejercicio centrado en la mecánica del lanzamiento de bola (Toss) y el punto de impacto.",
+        imageUrl = "https://placehold.co/400x200/2196F3/white?text=IMAGEN+DRILL+SAQUE"
+    ),
+    Plantilla(
+        id = "p3",
+        nombre = "Juego de Pies en la Red",
+        enfoque = "Movimiento y Agilidad",
+        duracionMinutos = 20,
+        descripcion = "Rutina de agilidad cerca de la red para mejorar reacción y desplazamiento.",
+        imageUrl = "https://placehold.co/400x200/FFC107/black?text=IMAGEN+PIES+RED"
+    ),
+    Plantilla(
+        id = "p4",
+        nombre = "Ejercicios de Cierre (Cool Down)",
+        enfoque = "Recuperación y Flexibilidad",
+        duracionMinutos = 15,
+        descripcion = "Estiramientos estáticos para bajar el ritmo y relajar músculos tras la sesión.",
+        imageUrl = "https://placehold.co/400x200/9C27B0/white?text=IMAGEN+CIERRE"
     )
-}
+)
 
 val PLANTILLAS_MOCK = getMockPlantillas()
 
-fun getMockAlumnos(): List<Alumnos> {
-    return listOf(
-        Alumnos("a1", "Juan Pérez", 10, 8, EstadoPago.ADELANTADO, "Trabajar en la estabilidad del tobillo izquierdo."),
-        Alumnos("a2", "María García", 5, 5, EstadoPago.ADELANTADO, "Mucha motivación, pero necesita centrarse en el Toss."),
-        Alumnos("a3", "Carlos Gómez", 12, 1, EstadoPago.DEUDA, "No ha pagado el último mes. Contactar urgente."),
-        Alumnos("a4", "Laura Fernández", 8, 3, EstadoPago.PENDIENTE, "Pendiente de respuesta para la renovación de paquete.")
-    )
-}
+// ------------------ SESIONES GLOBALES ------------------
 
-// Sesiones globales persistentes
 val SESIONES_GUARDADAS = mutableListOf(
     SesionDeClase(
         sessionId = "s1",
         userId = "PROTOTIPO_DEMO",
-        fechaCreacion = "2025-09-2025-10:00",
+        fechaCreacion = "2025-10-01 10:00",
         alumnoNombre = "Juan Pérez",
         duracionTotalMinutos = 40,
         ejercicios = mutableListOf(
@@ -112,13 +119,63 @@ val SESIONES_GUARDADAS = mutableListOf(
     )
 )
 
-// Función segura para acceder a la misma lista
 fun getMockSesionesGuardadas(): MutableList<SesionDeClase> = SESIONES_GUARDADAS
 
+// ------------------ ALUMNOS MOCK ------------------
 
+fun getMockAlumnos(): List<Alumnos> {
+    val sesionesJuan = getMockSesionesGuardadas()
+        .filter { it.alumnoNombre == "Juan Pérez" }
+        .map { it.toSesion() }
 
-// Funcion para generar un ID simple para el Mock de sesiones
+    return listOf(
+        Alumnos(
+            id = "a1",
+            nombre = "Juan Pérez",
+            nivel = "Intermedio",
+            objetivo = "Estabilidad del tobillo",
+            clasesPactadas = 10,
+            clasesCursadas = 8,
+            estadoPago = EstadoPago.ADELANTADO,
+            notasEntrenador = "Trabajar en la estabilidad del tobillo izquierdo.",
+            sesiones = sesionesJuan
+        ),
+        Alumnos(
+            id = "a2",
+            nombre = "María García",
+            nivel = "Avanzado",
+            objetivo = "Mejorar el Toss",
+            clasesPactadas = 5,
+            clasesCursadas = 5,
+            estadoPago = EstadoPago.ADELANTADO,
+            notasEntrenador = "Mucha motivación, pero necesita centrarse en el Toss."
+        ),
+        Alumnos(
+            id = "a3",
+            nombre = "Carlos Gómez",
+            nivel = "Intermedio",
+            objetivo = "Ser más constante",
+            clasesPactadas = 12,
+            clasesCursadas = 1,
+            estadoPago = EstadoPago.DEUDA,
+            notasEntrenador = "No ha pagado el último mes. Contactar urgente."
+        ),
+        Alumnos(
+            id = "a4",
+            nombre = "Laura Fernández",
+            nivel = "Inicial",
+            objetivo = "Reforzar técnica de revés",
+            clasesPactadas = 8,
+            clasesCursadas = 3,
+            estadoPago = EstadoPago.PENDIENTE,
+            notasEntrenador = "Pendiente de respuesta para la renovación de paquete."
+        )
+    )
+}
+
+// ------------------ HELPERS ------------------
+
 fun generarNuevoSessionId(sesiones: List<SesionDeClase>): String {
-    val ultimoId = sesiones.maxOfOrNull { it.sessionId.substring(1).toIntOrNull() ?: 0 } ?: 0
+    val ultimoId = sesiones.maxOfOrNull { it.sessionId.removePrefix("s").toIntOrNull() ?: 0 } ?: 0
     return "s${ultimoId + 1}"
 }

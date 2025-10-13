@@ -9,17 +9,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-data class Sesion(
+// Modelo de datos local para el historial
+data class SesionHistorial(
     val id: Int,
     val fecha: String,
     val descripcion: String,
     val duracion: Int
 )
 
-val SESIONES_MOCK = listOf(
-    Sesion(1, "2025-09-01", "Trabajo de saque y bolea", 45),
-    Sesion(2, "2025-09-03", "Revés cruzado y desplazamientos", 60),
-    Sesion(3, "2025-09-05", "Juego de pies y control de volea", 50)
+// Datos simulados
+val SESIONES_HISTORIAL_MOCK = listOf(
+    SesionHistorial(1, "2025-09-01", "Trabajo de saque y bolea", 45),
+    SesionHistorial(2, "2025-09-03", "Revés cruzado y desplazamientos", 60),
+    SesionHistorial(3, "2025-09-05", "Juego de pies y control de volea", 50)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,16 +45,25 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            items(SESIONES_MOCK) { sesion ->
+            items(SESIONES_HISTORIAL_MOCK) { sesion ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
                 ) {
                     Column(Modifier.padding(12.dp)) {
-                        Text(sesion.fecha, style = MaterialTheme.typography.titleMedium)
-                        Text(sesion.descripcion)
-                        Text("Duración: ${sesion.duracion} min", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            sesion.fecha,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            sesion.descripcion,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Duración: ${sesion.duracion} min",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
