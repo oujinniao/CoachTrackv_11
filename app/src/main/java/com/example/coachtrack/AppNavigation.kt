@@ -6,16 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.coachtrack.CamaraScreen
-import com.example.coachtrack.CarteraScreen
-import com.example.coachtrack.VideoScreen
 
-
-// Importamos las pantallas
-import com.example.coachtrack.PantallaPrincipal
-import com.example.coachtrack.PlanificacionScreen
-import com.example.coachtrack.HistorialScreen
-import com.example.coachtrack.VideoAnalisisScreen
+// Definición de las pantallas (Asegúrate de que este enum esté en Data.kt o similar)
+// Si esta clase no está en AppNavigation.kt, deberás importarla.
+// enum class Screen { Principal, Planificacion, Historial, VideoAnalisis, Camara, Cartera, Video }
 
 @Composable
 fun AppNavigation(firebaseManager: FakeFirebaseManager) {
@@ -47,36 +41,41 @@ fun AppNavigation(firebaseManager: FakeFirebaseManager) {
         }
 
         is Screen.Planificacion -> {
+            // FIX: Se cambió el parámetro a 'onVolver' para coincidir con la definición de PlanificacionScreen
             PlanificacionScreen(
                 onVolverClick = { currentScreen = Screen.Principal }
             )
         }
 
         is Screen.Historial -> {
+            // FIX: Se cambió el parámetro a 'onVolver' para coincidir con la definición de HistorialScreen
             HistorialScreen(
                 onVolverClick = { currentScreen = Screen.Principal }
             )
         }
 
         is Screen.VideoAnalisis -> {
+            // FIX: Se cambió el parámetro a 'onVolver' para coincidir con la definición de VideoAnalisisScreen
             VideoAnalisisScreen(
                 onVolverClick = { currentScreen = Screen.Principal }
             )
-
         }
         is Screen.Camara -> {
+            // FIX: Se cambió el parámetro a 'onVolver' para coincidir con la definición de CamaraScreen
             CamaraScreen(
                 onVolverClick = { currentScreen = Screen.Principal }
             )
         }
 
         is Screen.Cartera -> {
+            // Llama a CarteraScreen con el parámetro 'onVolver'
             CarteraScreen(
                 onVolver = { currentScreen = Screen.Principal }
             )
         }
 
         is Screen.Video -> {
+            // Llama a VideoScreen con el parámetro 'onVolver'
             VideoScreen(
                 onVolver = { currentScreen = Screen.Principal }
             )

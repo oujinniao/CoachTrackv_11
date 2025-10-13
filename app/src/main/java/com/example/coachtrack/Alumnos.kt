@@ -5,7 +5,10 @@ data class Alumnos(
     val nombre: String,
     val clasesPactadas: Int,
     val clasesCursadas: Int,
-    val estadoPago: EstadoPago
+    val estadoPago: EstadoPago,
+    var notasEntrenador: String = ""
+
+
 
 )
 

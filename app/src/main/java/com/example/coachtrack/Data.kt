@@ -1,9 +1,54 @@
 package com.example.coachtrack
 
-import androidx.compose.runtime.mutableStateListOf
+
+import java.util.UUID
+
+// ------------------ ESTRUCTURAS DE DATOS ------------------
+
+data class Plantilla(
+    val id: String,
+    val nombre: String,
+    val enfoque: String,
+    val duracionMinutos: Int,
+    val descripcion: String,
+    val imageUrl: String,
+    val instanceId:String = UUID.randomUUID().toString() // Usamos UUID importado
+) {
+    fun toMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "nombre" to nombre,
+            "enfoque" to enfoque,
+            "duracionMinutos" to duracionMinutos,
+            "descripcion" to descripcion,
+            "imageUrl" to imageUrl
+        )
+    }
+}
+
+
+data class SesionDeClase(
+    val sessionId: String,
+    val userId: String = "PROTOTIPO_DEMO",
+    val fechaCreacion: String, // Usamos LocalDateTime para tener la fecha y hora exacta, dejamos fechaCreacion como String para simplificar
+    val alumnoNombre: String,
+    val duracionTotalMinutos: Int,
+    val ejercicios: MutableList<Plantilla>, // Esta es una lista mutable estándar
+) {
+    fun toMap(): Map<String, Any> {
+        return mapOf(
+            "userId" to userId,
+            "fecha" to fechaCreacion.toString(),
+            "alumno" to alumnoNombre,
+            "duracionTotalMinutos" to duracionTotalMinutos,
+            "ejercicios" to ejercicios.map { it.toMap() }
+        )
+    }
+}
+
+// ------------------ MOCK DATA Y HELPERS ------------------
 
 // Lista predefinida de plantillas (las bibliotecas de ejercicios)
-
 fun getMockPlantillas(): List<Plantilla> {
     return listOf(
         Plantilla(
@@ -37,78 +82,43 @@ fun getMockPlantillas(): List<Plantilla> {
             duracionMinutos = 15,
             descripcion = "Estiramientos estáticos y suaves para bajar el ritmo cardíaco y reducir la tensión muscular después del entrenamiento. Foco en isquiotibiales, cuádriceps y espalda baja. Es obligatorio para prevenir el dolor post-ejercicio.",
             imageUrl = "https://placehold.co/400x200/9C27B0/white?text=IMAGEN+CIERRE"
-        ),
-        Plantilla(
-            id = "p5",
-            nombre = "Ejercicio de Top Spin",
-            enfoque = "Técnica Avanzada",
-            duracionMinutos = 45,
-            descripcion="técnica de golpeo que imprime a la pelota un giro hacia adelante, haciendo que caiga más rápido y rebote con mayor fuerza y de forma brusca",
-            imageUrl = "https://www.google.com/search?sca_esv=fa0d648ec49d7a9f&rlz=1C1ALOY_esCL1040CL1040&udm=2&fbs=AIIjpHx4nJjfGojPVHhEACUHPiMQht6_BFq6vBIoFFRK7qchKEWEvuc0Hbw31oEI7c8o3y7EH2T73cHYgsE1-NZATxMpGR5vj5F1FSpJQGl9M4am3709kXxFlYHA-KUl_i_ojuEnb6fHvj4RwUjPRK_auW2s8c0Zn9pt-DWsDQeXfe08jKu9U7SSlNGqUaPOk78TJ0i4PytRrDvtRyDBV7LdCZ7ej7eBOYIWUoFLvDoxyUzeSH8rY_w&q=definicion+de+topspin+en+tenis%2Burl&sa=X&ved=2ahUKEwiI_aWb-5WQAxX1qpUCHXAAIAkQtKgLegQIFhAB&biw=1536&bih=703&dpr=1.25#vhid=rpra0c4efC3HeM&vssid=mosaic",
         )
     )
-
-}
-
-// Inicializa el historial con la primera sesión predefinida
-fun getMockSesionesGuardadas(): MutableList<SesionDeClase> {
-    return mutableStateListOf(
-        SesionDeClase(
-            sessionId = "s1",
-            userId = "PROTOTIPO_DEMO",
-            fecha = "2024-10-07",
-            alumno = "Juan Pérez",
-            duracionTotalMinutos = 40,
-            ejercicios = mutableStateListOf(
-                getMockPlantillas().first { it.id == "p1" }, // Rutina Calentamiento
-                getMockPlantillas().first { it.id == "p3" }  // Juego de Pies
-            )
-        )
-    )
-}
-
-// Estructuras de Datos
-
-data class Plantilla(
-    val id: String,
-    val nombre: String,
-    val enfoque: String,
-    val duracionMinutos: Int,
-    val descripcion: String, // Nuevo campo para el broucher
-    val imageUrl: String      // Nuevo campo para simular imagen/video
-) {
-    // Función de extensión para convertir la plantilla a un Mapa que Firestore pueda guardar.
-    fun toMap(): Map<String, Any> {
-        return mapOf(
-            "id" to id,
-            "nombre" to nombre,
-            "enfoque" to enfoque,
-            "duracionMinutos" to duracionMinutos,
-            "descripcion" to descripcion,
-            "imageUrl" to imageUrl
-        )
-    }
-}
-
-data class SesionDeClase(
-    val sessionId: String,
-    val userId: String,
-    val fecha: String,
-    val alumno: String,
-    val duracionTotalMinutos: Int,
-    val ejercicios: MutableList<Plantilla>
-) {
-    // Función de extensión para convertir la SesiónDeClase a un Mapa.
-    fun toMap(): Map<String, Any> {
-        return mapOf(
-            "userId" to userId,
-            "fecha" to fecha,
-            "alumno" to alumno,
-            "duracionTotalMinutos" to duracionTotalMinutos,
-            "ejercicios" to ejercicios.map { it.toMap() } // Convierte la lista de Plantillas a lista de Mapas
-        )
-    }
-
 }
 
 val PLANTILLAS_MOCK = getMockPlantillas()
+
+fun getMockAlumnos(): List<Alumnos> {
+    return listOf(
+        Alumnos("a1", "Juan Pérez", 10, 8, EstadoPago.ADELANTADO, "Trabajar en la estabilidad del tobillo izquierdo."),
+        Alumnos("a2", "María García", 5, 5, EstadoPago.ADELANTADO, "Mucha motivación, pero necesita centrarse en el Toss."),
+        Alumnos("a3", "Carlos Gómez", 12, 1, EstadoPago.DEUDA, "No ha pagado el último mes. Contactar urgente."),
+        Alumnos("a4", "Laura Fernández", 8, 3, EstadoPago.PENDIENTE, "Pendiente de respuesta para la renovación de paquete.")
+    )
+}
+
+// Sesiones globales persistentes
+val SESIONES_GUARDADAS = mutableListOf(
+    SesionDeClase(
+        sessionId = "s1",
+        userId = "PROTOTIPO_DEMO",
+        fechaCreacion = "2025-09-2025-10:00",
+        alumnoNombre = "Juan Pérez",
+        duracionTotalMinutos = 40,
+        ejercicios = mutableListOf(
+            PLANTILLAS_MOCK.first { it.id == "p1" },
+            PLANTILLAS_MOCK.first { it.id == "p3" }
+        )
+    )
+)
+
+// Función segura para acceder a la misma lista
+fun getMockSesionesGuardadas(): MutableList<SesionDeClase> = SESIONES_GUARDADAS
+
+
+
+// Funcion para generar un ID simple para el Mock de sesiones
+fun generarNuevoSessionId(sesiones: List<SesionDeClase>): String {
+    val ultimoId = sesiones.maxOfOrNull { it.sessionId.substring(1).toIntOrNull() ?: 0 } ?: 0
+    return "s${ultimoId + 1}"
+}
