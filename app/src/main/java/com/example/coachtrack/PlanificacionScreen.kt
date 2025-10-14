@@ -49,12 +49,22 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
             val fechaGuardado = LocalDateTime.now().format(formatter)
 
             val nuevoSessionId = generarNuevoSessionId(getMockSesionesGuardadas())
+
             val nuevaSesion = SesionDeClase(
                 sessionId = nuevoSessionId,
                 alumnoNombre = alumnoSeleccionado!!.nombre,
                 fechaCreacion = fechaGuardado,
                 duracionTotalMinutos = ejerciciosSesion.sumOf { it.duracionMinutos },
                 ejercicios = ejerciciosSesion.toList().toMutableList()
+            )
+            SesionRepository.agregarSesion(
+                Sesion(
+                    id = nuevaSesion.sessionId,
+                    titulo = "Sesión de ${alumnoSeleccionado!!.nombre}",
+                    fecha = nuevaSesion.fechaCreacion,
+                    duracionMin = nuevaSesion.duracionTotalMinutos,
+                    estado = "Completada"
+            )
             )
 
             getMockSesionesGuardadas().add(0, nuevaSesion)

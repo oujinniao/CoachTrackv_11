@@ -4,29 +4,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Modelo de datos local para el historial
-data class SesionHistorial(
-    val id: Int,
-    val fecha: String,
-    val descripcion: String,
-    val duracion: Int
-)
-
-// Datos simulados
-val SESIONES_HISTORIAL_MOCK = listOf(
-    SesionHistorial(1, "2025-09-01", "Trabajo de saque y bolea", 45),
-    SesionHistorial(2, "2025-09-03", "Revés cruzado y desplazamientos", 60),
-    SesionHistorial(3, "2025-09-05", "Juego de pies y control de volea", 50)
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorialScreen(onVolverClick: () -> Unit) {
+    val sesiones = remember { mutableStateListOf<Sesion>().apply {
+        addAll(SesionRepository.obtenerSesiones())
+    }}
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -45,25 +34,30 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            items(SESIONES_HISTORIAL_MOCK) { sesion ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                ) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(
-                            sesion.fecha,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            sesion.descripcion,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Duración: ${sesion.duracion} min",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+            if (sesiones.isEmpty()) {
+                item {
+                    Text(
+                        "No hay sesiones registradas aún.",
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                items(sesiones) { sesion ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                sesion.titulo,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text("Fecha: ${sesion.fecha}")
+                            Text("Duración: ${sesion.duracionMin} min")
+                            Text("Estado: ${sesion.estado}")
+                        }
                     }
                 }
             }
