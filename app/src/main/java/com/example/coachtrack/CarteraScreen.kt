@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +27,8 @@ fun CarteraScreen(
     onVolver: () -> Unit,
     onAbrirFichaAlumno: (Alumnos) -> Unit
 ) {
+    var filtro by remember { mutableStateOf("") }
+
     val alumnos = remember {
         mutableStateListOf(
             Alumnos("a1", "Juan Pérez", "Intermedio", "Mejorar saque", 8, 5, EstadoPago.PENDIENTE),
@@ -36,8 +39,16 @@ fun CarteraScreen(
         )
     }
 
+    // 🔍 Filtrado + orden dinámico
+    val alumnosFiltrados = alumnos
+        .filter { it.nombre.contains(filtro, ignoreCase = true) }
+        .sortedByDescending { it.clasesCursadas }
+
+    // 💰 Cálculo de deuda
     val totalDeuda = remember {
-        derivedStateOf { alumnos.count { it.estadoPago == EstadoPago.DEUDA || it.estadoPago == EstadoPago.PENDIENTE } }
+        derivedStateOf {
+            alumnos.count { it.estadoPago == EstadoPago.DEUDA || it.estadoPago == EstadoPago.PENDIENTE }
+        }
     }
 
     Scaffold(
@@ -58,7 +69,19 @@ fun CarteraScreen(
                 .padding(pv)
                 .padding(horizontal = 16.dp)
         ) {
-            // Tarjeta de resumen rápido
+
+            // 🔍 BUSCADOR
+            OutlinedTextField(
+                value = filtro,
+                onValueChange = { filtro = it },
+                label = { Text("Buscar alumno...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            )
+
+            // 💰 TARJETA DE RESUMEN DE PAGOS
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -83,9 +106,9 @@ fun CarteraScreen(
                 }
             }
 
-            // Lista de alumnos
+            // 📋 LISTA DE ALUMNOS
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(alumnos, key = { it.id }) { alumno ->
+                items(alumnosFiltrados, key = { it.id }) { alumno ->
                     AlumnoCard(
                         alumno = alumno,
                         onClaseDada = {
@@ -103,15 +126,14 @@ fun CarteraScreen(
                             alumnos[index] = alumno.copy(estadoPago = EstadoPago.ADELANTADO)
                         },
                         onContactoRapido = {
-                            println("Simulando envío de mensaje de WhatsApp a ${alumno.nombre} por pago pendiente.")
+                            println("Simulando envío de mensaje a ${alumno.nombre}")
                         },
-                        onAbrirFichaAlumno = {
-                            onAbrirFichaAlumno(alumno)
-                        }
+                        onAbrirFichaAlumno = { onAbrirFichaAlumno(alumno) }
                     )
                 }
             }
 
+            // 🔙 BOTÓN VOLVER
             Button(
                 onClick = onVolver,
                 modifier = Modifier
@@ -143,12 +165,15 @@ fun AlumnoCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clickable { onAbrirFichaAlumno(alumno) } // 👈 abre ficha al tocar
+            .clickable { onAbrirFichaAlumno(alumno) }
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(alumno.nombre, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        alumno.nombre,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
 
                     LinearProgressIndicator(
                         progress = { alumno.clasesCursadas.toFloat() / alumno.clasesPactadas.toFloat() },
@@ -161,7 +186,7 @@ fun AlumnoCard(
                     )
 
                     Text(
-                        "Clases: ${alumno.clasesCursadas} de ${alumno.clasesPactadas} (Restan: $clasesRestantes)",
+                        "Clases: ${alumno.clasesCursadas} / ${alumno.clasesPactadas} (Restan: $clasesRestantes)",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp)
                     )
@@ -185,7 +210,6 @@ fun AlumnoCard(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
