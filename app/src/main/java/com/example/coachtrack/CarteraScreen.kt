@@ -1,5 +1,9 @@
 package com.example.coachtrack
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,15 +27,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun CarteraScreen(
     onVolver: () -> Unit,
     onAbrirFichaAlumno: (Alumnos) -> Unit
 ) {
     var filtro by remember { mutableStateOf("") }
+    var showDashboard by remember { mutableStateOf(false) }
+    var showList by remember { mutableStateOf(false) }
 
-    // Mock local
+    LaunchedEffect(Unit) {
+        showDashboard = true
+        showList = true
+    }
+
+    // ---------------- MOCK DE ALUMNOS ----------------
     val alumnos = remember {
         mutableStateListOf(
             Alumnos("a1", "Juan Pérez", "Intermedio", "Mejorar saque", 8, 5, EstadoPago.PENDIENTE),
@@ -43,14 +54,8 @@ fun CarteraScreen(
         )
     }
 
-    // Filtro + orden por progreso
-    val alumnosFiltrados = remember(filtro, alumnos) {
-        alumnos
-            .filter { it.nombre.contains(filtro, ignoreCase = true) }
-            .sortedByDescending { it.clasesCursadas.toFloat() / it.clasesPactadas.toFloat() }
-    }
+    val alumnosFiltrados = alumnos.filter { it.nombre.contains(filtro, ignoreCase = true) }
 
-    // KPIs
     val totalAlumnos = alumnos.size
     val alDia = alumnos.count { it.estadoPago == EstadoPago.ADELANTADO }
     val pendientes = alumnos.count { it.estadoPago == EstadoPago.PENDIENTE }
@@ -75,7 +80,7 @@ fun CarteraScreen(
                 .padding(horizontal = 16.dp)
         ) {
 
-            // 🔎 Buscar
+            // ---------------- BUSCADOR ----------------
             OutlinedTextField(
                 value = filtro,
                 onValueChange = { filtro = it },
@@ -86,30 +91,42 @@ fun CarteraScreen(
                     .padding(vertical = 8.dp)
             )
 
-            // 📊 Dashboard 2x2 (evita corte en pantallas angostas)
-            Row(Modifier.fillMaxWidth()) {
-                DashboardCard(title = "Total", value = totalAlumnos.toString(), color = Color(0xFF1565C0), modifier = Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
-                DashboardCard(title = "Al día", value = alDia.toString(), color = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth()) {
-                DashboardCard(title = "Pendientes", value = pendientes.toString(), color = Color(0xFFFFA000), modifier = Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
-                DashboardCard(title = "Deuda", value = enDeuda.toString(), color = Color(0xFFC62828), modifier = Modifier.weight(1f))
+            // ---------------- DASHBOARD ----------------
+            AnimatedVisibility(
+                visible = showDashboard,
+                enter = fadeIn(animationSpec = tween(800)) + scaleIn(
+                    initialScale = 0.8f,
+                    animationSpec = spring(dampingRatio = 0.6f)
+                ),
+                exit = fadeOut()
+            ) {
+                Column {
+                    Row(Modifier.fillMaxWidth()) {
+                        DashboardCard("Total", totalAlumnos.toString(), Color(0xFF1565C0), Modifier.weight(1f))
+                        Spacer(Modifier.width(8.dp))
+                        DashboardCard("Al día", alDia.toString(), Color(0xFF2E7D32), Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth()) {
+                        DashboardCard("Pendientes", pendientes.toString(), Color(0xFFFFA000), Modifier.weight(1f))
+                        Spacer(Modifier.width(8.dp))
+                        DashboardCard("Deuda", enDeuda.toString(), Color(0xFFC62828), Modifier.weight(1f))
+                    }
+                }
             }
 
-            // Separación sutil antes del aviso
             Spacer(Modifier.height(8.dp))
 
-            // 💰 Aviso de pagos
+            // ---------------- AVISO ----------------
             val hayPendientes = (enDeuda + pendientes) > 0
+            val avisoColor by animateColorAsState(
+                if (hayPendientes) Color(0xFFFFCCBC) else Color(0xFFC8E6C9),
+                animationSpec = spring(dampingRatio = 0.7f)
+            )
+
             Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (hayPendientes) Color(0xFFFFCCBC) else Color(0xFFC8E6C9)
-                )
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = avisoColor)
             ) {
                 Text(
                     text = if (hayPendientes)
@@ -118,61 +135,68 @@ fun CarteraScreen(
                         "Cartera al día. ¡Excelente!",
                     modifier = Modifier.padding(12.dp),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (hayPendientes) Color(0xFFD32F2F) else Color(0xFF388E3C)
+                    color = if (hayPendientes) Color(0xFFD32F2F) else Color(0xFF388E3C),
+                    textAlign = TextAlign.Center
                 )
             }
 
-            // 📝 Lista
             Spacer(Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(alumnosFiltrados, key = { it.id }) { alumno ->
-                    AlumnoCard(
-                        alumno = alumno,
-                        onClaseDada = {
-                            if (alumno.clasesCursadas < alumno.clasesPactadas) {
-                                val i = alumnos.indexOf(alumno)
-                                alumnos[i] = alumno.copy(
-                                    clasesCursadas = alumno.clasesCursadas + 1,
-                                    estadoPago = if (alumno.clasesCursadas + 1 >= alumno.clasesPactadas)
-                                        EstadoPago.PENDIENTE else alumno.estadoPago
-                                )
-                            }
-                        },
-                        onPagoRegistrar = {
-                            val i = alumnos.indexOf(alumno)
-                            alumnos[i] = alumno.copy(estadoPago = EstadoPago.ADELANTADO)
-                        },
-                        onContactoRapido = {
-                            println("Simulando WhatsApp a ${alumno.nombre}")
-                        },
-                        onAbrirFichaAlumno = { onAbrirFichaAlumno(alumno) }
-                    )
+
+            // ---------------- LISTA ----------------
+            AnimatedVisibility(
+                visible = showList,
+                enter = fadeIn(animationSpec = tween(700)) + scaleIn(
+                    initialScale = 0.9f,
+                    animationSpec = spring(dampingRatio = 0.5f)
+                ),
+                exit = fadeOut()
+            ) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(alumnosFiltrados, key = { it.id }) { alumno ->
+                        AlumnoCard(
+                            alumno = alumno,
+                            onClaseDada = {
+                                if (alumno.clasesCursadas < alumno.clasesPactadas) {
+                                    val index = alumnos.indexOf(alumno)
+                                    alumnos[index] = alumno.copy(
+                                        clasesCursadas = alumno.clasesCursadas + 1,
+                                        estadoPago = if (alumno.clasesCursadas + 1 >= alumno.clasesPactadas)
+                                            EstadoPago.PENDIENTE else alumno.estadoPago
+                                    )
+                                }
+                            },
+                            onPagoRegistrar = {
+                                val index = alumnos.indexOf(alumno)
+                                alumnos[index] = alumno.copy(estadoPago = EstadoPago.ADELANTADO)
+                            },
+                            onContactoRapido = {
+                                println("Enviando WhatsApp a ${alumno.nombre}")
+                            },
+                            onAbrirFichaAlumno = { onAbrirFichaAlumno(alumno) }
+                        )
+                    }
                 }
             }
 
-            // ⬅ Volver
+            // ---------------- BOTÓN VOLVER ----------------
             Button(
                 onClick = onVolver,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp)
-            ) { Text("Volver") }
+            ) {
+                Text("Volver")
+            }
         }
     }
 }
 
-// ---------- UI helpers ----------
-
+// ---------------- DASHBOARD CARD ----------------
 @Composable
-private fun DashboardCard(
-    title: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
+fun DashboardCard(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.10f))
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f))
     ) {
         Column(
             modifier = Modifier
@@ -180,22 +204,13 @@ private fun DashboardCard(
                 .padding(vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = value,
-                color = color,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 20.sp,                // número grande
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = color.copy(alpha = 0.9f)
-            )
+            Text(value, color = color, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+            Text(title, style = MaterialTheme.typography.bodySmall, color = color.copy(alpha = 0.8f))
         }
     }
 }
 
+// ---------------- CARD DE ALUMNO ----------------
 @Composable
 fun AlumnoCard(
     alumno: Alumnos,
@@ -204,12 +219,19 @@ fun AlumnoCard(
     onContactoRapido: () -> Unit,
     onAbrirFichaAlumno: (Alumnos) -> Unit
 ) {
-    val clasesRestantes = alumno.clasesPactadas - alumno.clasesCursadas
-    val colorEstado = when (alumno.estadoPago) {
-        EstadoPago.ADELANTADO -> Color(0xFF4CAF50)
-        EstadoPago.PENDIENTE -> Color(0xFFFFC107)
-        EstadoPago.DEUDA -> Color(0xFFF44336)
-    }
+    val progresoAnimado by animateFloatAsState(
+        targetValue = alumno.clasesCursadas.toFloat() / alumno.clasesPactadas.toFloat(),
+        animationSpec = spring(dampingRatio = 0.7f)
+    )
+
+    val colorEstado by animateColorAsState(
+        when (alumno.estadoPago) {
+            EstadoPago.ADELANTADO -> Color(0xFF4CAF50)
+            EstadoPago.PENDIENTE -> Color(0xFFFFC107)
+            EstadoPago.DEUDA -> Color(0xFFF44336)
+        },
+        animationSpec = spring(dampingRatio = 0.7f)
+    )
 
     Card(
         modifier = Modifier
@@ -220,12 +242,9 @@ fun AlumnoCard(
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(
-                        alumno.nombre,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
+                    Text(alumno.nombre, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
                     LinearProgressIndicator(
-                        progress = { alumno.clasesCursadas.toFloat() / alumno.clasesPactadas.toFloat() },
+                        progress = { progresoAnimado },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
@@ -234,15 +253,12 @@ fun AlumnoCard(
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Text(
-                        "Clases: ${alumno.clasesCursadas} de ${alumno.clasesPactadas} (Restan: $clasesRestantes)",
+                        "Clases: ${alumno.clasesCursadas} / ${alumno.clasesPactadas}",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                Column(
-                    modifier = Modifier.width(60.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
+                Column(horizontalAlignment = Alignment.End) {
                     Box(
                         modifier = Modifier
                             .size(16.dp)
@@ -257,38 +273,21 @@ fun AlumnoCard(
                     )
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
-
+            Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = onClaseDada,
-                    enabled = clasesRestantes > 0,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                Button(onClick = onClaseDada, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Clase")
                 }
-                Button(
-                    onClick = onPagoRegistrar,
-                    enabled = alumno.estadoPago != EstadoPago.ADELANTADO,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(16.dp))
+                Button(onClick = onPagoRegistrar, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.Payment, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Pagar")
                 }
-                if (alumno.estadoPago == EstadoPago.DEUDA || alumno.estadoPago == EstadoPago.PENDIENTE) {
-                    IconButton(
-                        onClick = onContactoRapido,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    ) {
-                        Icon(
-                            Icons.Default.Send,
-                            contentDescription = "Enviar WhatsApp",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                if (alumno.estadoPago != EstadoPago.ADELANTADO) {
+                    IconButton(onClick = onContactoRapido) {
+                        Icon(Icons.Default.Send, null, tint = MaterialTheme.colorScheme.error)
                     }
                 }
             }
