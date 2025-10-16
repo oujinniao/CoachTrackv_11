@@ -9,7 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -37,8 +40,11 @@ fun CarteraScreen(
     var showDashboard by remember { mutableStateOf(false) }
     var showList by remember { mutableStateOf(false) }
 
+    // 🔹 Animación secuencial: primero Dashboard, luego Lista
     LaunchedEffect(Unit) {
+        delay(300)
         showDashboard = true
+        delay(300)
         showList = true
     }
 
@@ -50,7 +56,12 @@ fun CarteraScreen(
             Alumnos("a3", "Carlos Ruiz", "Inicial", "Consistencia de revés", 6, 2, EstadoPago.ADELANTADO),
             Alumnos("a4", "Laura Martínez", "Intermedio", "Velocidad de desplazamiento", 12, 11, EstadoPago.PENDIENTE),
             Alumnos("a5", "Felipe Gómez", "Inicial", "Aprender técnica de saque", 5, 0, EstadoPago.ADELANTADO),
-            Alumnos("a6", "Diego Díaz", "Intermedio", "Resistencia física", 12, 10, EstadoPago.PENDIENTE)
+            Alumnos("a6", "Diego Díaz", "Intermedio", "Resistencia física", 12, 10, EstadoPago.PENDIENTE),
+            Alumnos("a7", "Pedro Soto", "Intermedio", "Control de bola", 8, 4, EstadoPago.PENDIENTE),
+            Alumnos("a8", "Ana Torres", "Inicial", "Postura básica", 5, 2, EstadoPago.ADELANTADO),
+            Alumnos("a9", "José Morales", "Avanzado", "Táctica de partido", 10, 7, EstadoPago.DEUDA),
+            Alumnos("a10", "Sofía Rivas", "Intermedio", "Regularidad", 7, 5, EstadoPago.ADELANTADO),
+            Alumnos("a11", "Claudio Vega", "Inicial", "Saque con efecto", 6, 3, EstadoPago.PENDIENTE)
         )
     }
 
@@ -79,7 +90,6 @@ fun CarteraScreen(
                 .padding(pv)
                 .padding(horizontal = 16.dp)
         ) {
-
             // ---------------- BUSCADOR ----------------
             OutlinedTextField(
                 value = filtro,
@@ -94,20 +104,31 @@ fun CarteraScreen(
             // ---------------- DASHBOARD ----------------
             AnimatedVisibility(
                 visible = showDashboard,
-                enter = fadeIn(animationSpec = tween(800)) + scaleIn(
-                    initialScale = 0.8f,
-                    animationSpec = spring(dampingRatio = 0.6f)
-                ),
+                enter = fadeIn(animationSpec = tween(700)) +
+                        scaleIn(initialScale = 0.7f, animationSpec = spring(dampingRatio = 0.5f)),
                 exit = fadeOut()
             ) {
-                Column {
-                    Row(Modifier.fillMaxWidth()) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Resumen general",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         DashboardCard("Total", totalAlumnos.toString(), Color(0xFF1565C0), Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
                         DashboardCard("Al día", alDia.toString(), Color(0xFF2E7D32), Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         DashboardCard("Pendientes", pendientes.toString(), Color(0xFFFFA000), Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
                         DashboardCard("Deuda", enDeuda.toString(), Color(0xFFC62828), Modifier.weight(1f))
@@ -145,13 +166,15 @@ fun CarteraScreen(
             // ---------------- LISTA ----------------
             AnimatedVisibility(
                 visible = showList,
-                enter = fadeIn(animationSpec = tween(700)) + scaleIn(
-                    initialScale = 0.9f,
-                    animationSpec = spring(dampingRatio = 0.5f)
-                ),
+                enter = fadeIn(animationSpec = tween(600)) +
+                        slideInVertically(initialOffsetY = { it / 2 }),
                 exit = fadeOut()
             ) {
-                LazyColumn(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
                     items(alumnosFiltrados, key = { it.id }) { alumno ->
                         AlumnoCard(
                             alumno = alumno,
