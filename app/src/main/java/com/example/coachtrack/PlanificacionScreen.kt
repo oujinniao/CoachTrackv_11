@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Videocam
@@ -25,10 +26,7 @@ import java.util.UUID
 enum class PlanificacionState {
     PRINCIPAL,
     CARTERA,
-    VIDEO,
-    FICHA_ALUMNO,  // 🔹 Nuevo estado para mostrar FichaAlumnoScreen
-    FICHA_TECNICA,
-    MINI_PLANIFICACION
+    VIDEO
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +34,6 @@ enum class PlanificacionState {
 fun PlanificacionScreen(onVolverClick: () -> Unit) {
     var currentState by remember { mutableStateOf(PlanificacionState.PRINCIPAL) }
     val ejerciciosSesion = remember { mutableStateListOf<Plantilla>() }
-    var plantillaSeleccionada by remember { mutableStateOf<Plantilla?>(null) }
     var alumnoSeleccionado by remember { mutableStateOf<Alumnos?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -44,210 +41,186 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
     // -------------------- LÓGICA DE GUARDADO --------------------
     val onGuardarSesion: () -> Unit = {
-        if (alumnoSeleccionado != null && ejerciciosSesion.isNotEmpty()) {
-            val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm")
-            val fechaGuardado = LocalDateTime.now().format(formatter)
+        val alumno = alumnoSeleccionado
 
-            val nuevoSessionId = generarNuevoSessionId(getMockSesionesGuardadas())
-
-            val nuevaSesion = SesionDeClase(
-                sessionId = nuevoSessionId,
-                alumnoNombre = alumnoSeleccionado!!.nombre,
-                fechaCreacion = fechaGuardado,
-                duracionTotalMinutos = ejerciciosSesion.sumOf { it.duracionMinutos },
-                ejercicios = ejerciciosSesion.toList().toMutableList()
-            )
-            SesionRepository.agregarSesion(
-                Sesion(
-                    id = nuevaSesion.sessionId,
-                    titulo = "Sesión de ${alumnoSeleccionado!!.nombre}",
-                    fecha = nuevaSesion.fechaCreacion,
-                    duracionMin = nuevaSesion.duracionTotalMinutos,
-                    estado = "Completada"
-            )
-            )
-
-            getMockSesionesGuardadas().add(0, nuevaSesion)
-
-            val nombreAlumno = alumnoSeleccionado!!.nombre
+        if (alumno == null) {
             scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = "Sesión guardada con éxito para $nombreAlumno!",
-                    duration = SnackbarDuration.Short
-                )
+                snackbarHostState.showSnackbar("Debe seleccionar un alumno.")
             }
-
-            ejerciciosSesion.clear()
-            alumnoSeleccionado = null
-            currentState = PlanificacionState.PRINCIPAL
-            onVolverClick()
-        } else {
+        } else if (ejerciciosSesion.isEmpty()) {
             scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = "Debe seleccionar un alumno y al menos un ejercicio.",
-                    duration = SnackbarDuration.Short
+                snackbarHostState.showSnackbar("Debe añadir al menos una plantilla.")
+            }
+        } else {
+            try {
+                val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm")
+                val fechaGuardado = LocalDateTime.now().format(formatter)
+                val nuevoSessionId = generarNuevoSessionId(getMockSesionesGuardadas())
+
+                val nuevaSesion = SesionDeClase(
+                    sessionId = nuevoSessionId,
+                    alumnoNombre = alumno.nombre,
+                    fechaCreacion = fechaGuardado,
+                    duracionTotalMinutos = ejerciciosSesion.sumOf { it.duracionMinutos },
+                    ejercicios = ejerciciosSesion.toList().toMutableList()
                 )
+
+                // 🔹 Actualiza la lista global simulada
+                val sesionesCopia = getMockSesionesGuardadas().toMutableList()
+                sesionesCopia.add(0, nuevaSesion)
+                SESIONES_GUARDADAS.clear()
+                SESIONES_GUARDADAS.addAll(sesionesCopia)
+
+                // 🔹 (Opcional) Reflejar en HistorialScreen si usas el repositorio mock
+                runCatching {
+                    SesionRepository.agregarSesion(
+                        Sesion(
+                            id = nuevaSesion.sessionId,
+                            titulo = "Sesión de ${alumno.nombre}",
+                            fecha = nuevaSesion.fechaCreacion,
+                            duracionMin = nuevaSesion.duracionTotalMinutos,
+                            estado = "Completada"
+                        )
+                    )
+                }
+
+                scope.launch {
+                    snackbarHostState.showSnackbar("Sesión guardada con éxito para ${alumno.nombre}.")
+                }
+
+                ejerciciosSesion.clear()
+                alumnoSeleccionado = null
+                currentState = PlanificacionState.PRINCIPAL
+            } catch (e: Exception) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Error al guardar: ${e.message}")
+                }
             }
         }
     }
 
     // -------------------- INTERFAZ PRINCIPAL --------------------
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Planificación de Sesión") },
-                    navigationIcon = {
-                        IconButton(onClick = onVolverClick) {
-                            Icon(Icons.Default.List, contentDescription = "Volver al Menú")
-                        }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Planificación de Sesión") },
+                navigationIcon = {
+                    IconButton(onClick = onVolverClick) {
+                        Icon(Icons.Default.List, contentDescription = "Volver")
                     }
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { pv ->
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(pv)
-                    .padding(horizontal = 16.dp)
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { pv ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(pv)
+                .padding(horizontal = 16.dp)
+        ) {
+            // ---- SELECCIÓN DE ALUMNO ----
+            AlumnoSelector(
+                alumnoSeleccionado = alumnoSeleccionado,
+                alumnos = remember { getMockAlumnos() },
+                onAlumnoSelected = { alumnoSeleccionado = it }
+            )
+
+            // ---- LISTA DE EJERCICIOS ----
+            Text(
+                "Ejercicios de la Sesión (${ejerciciosSesion.size}):",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+            )
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // ---- SELECCIÓN DE ALUMNO ----
-                AlumnoSelector(
-                    alumnoSeleccionado = alumnoSeleccionado,
-                    alumnos = remember { getMockAlumnos() },
-                    onAlumnoSelected = { alumnoSeleccionado = it }
-                )
-
-                // ---- EJERCICIOS ----
-                Text(
-                    "Ejercicios de la Sesión (${ejerciciosSesion.size}):",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(ejerciciosSesion, key = { it.instanceId }) { ejercicio ->
-                        EjercicioCard(
-                            plantilla = ejercicio,
-                            onRemove = { ejerciciosSesion.remove(ejercicio) }
-                        )
-                    }
-
-                    item {
-                        Divider(Modifier.padding(vertical = 8.dp))
-                        Text(
-                            "Plantillas Disponibles:",
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                    }
-
-                    items(PLANTILLAS_MOCK, key = { it.id }) { plantilla ->
-                        PlantillaCard(
-                            plantilla = plantilla,
-                            onAdd = {
-                                plantillaSeleccionada = plantilla
-                                currentState = PlanificacionState.FICHA_TECNICA
-                            }
-                        )
-                    }
+                val ejerciciosCopia = ejerciciosSesion.toList()
+                items(ejerciciosCopia, key = { it.instanceId }) { ejercicio ->
+                    EjercicioCard(
+                        plantilla = ejercicio,
+                        onRemove = { ejerciciosSesion.remove(ejercicio) }
+                    )
                 }
 
-                // ---- BOTONES SECUNDARIOS ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(
-                        onClick = { currentState = PlanificacionState.CARTERA },
-                        modifier = Modifier.weight(1f).padding(end = 8.dp)
-                    ) {
-                        Icon(Icons.Default.List, contentDescription = "Cartera")
-                        Spacer(Modifier.width(4.dp))
-                        Text("Cartera")
-                    }
-
-                    Button(
-                        onClick = { currentState = PlanificacionState.VIDEO },
-                        modifier = Modifier.weight(1f).padding(start = 8.dp)
-                    ) {
-                        Icon(Icons.Default.Videocam, contentDescription = "Video")
-                        Spacer(Modifier.width(4.dp))
-                        Text("Video")
-                    }
+                item {
+                    Divider(Modifier.padding(vertical = 8.dp))
+                    Text(
+                        "Plantillas Disponibles:",
+                        style = MaterialTheme.typography.titleSmall
+                    )
                 }
 
-                // ---- BOTÓN GUARDAR ----
-                Button(
-                    onClick = { onGuardarSesion() },
-                    enabled = alumnoSeleccionado != null && ejerciciosSesion.isNotEmpty(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                        .height(50.dp)
-                ) {
-                    Text("GUARDAR Y VOLVER")
-                }
-            }
-        }
-
-        // -------------------- SUBPANTALLAS --------------------
-        when (currentState) {
-            PlanificacionState.CARTERA -> CarteraScreen(
-                onVolver = { currentState = PlanificacionState.PRINCIPAL },
-                onAbrirFichaAlumno = { alumno ->
-                    alumnoSeleccionado = alumno
-                    currentState = PlanificacionState.FICHA_ALUMNO
-                }
-            )
-
-            PlanificacionState.VIDEO -> VideoScreen(
-                onVolver = { currentState = PlanificacionState.PRINCIPAL }
-            )
-
-            PlanificacionState.FICHA_ALUMNO -> {
-                alumnoSeleccionado?.let { alumno ->
-                    FichaAlumnoScreen(
-                        alumnoInicial = alumno,
-                        onVolver = { currentState = PlanificacionState.CARTERA },
-                        onNuevaSesionClick = {
-                            alumnoSeleccionado = it
-                            currentState = PlanificacionState.MINI_PLANIFICACION
+                items(PLANTILLAS_MOCK, key = { it.id }) { plantilla ->
+                    PlantillaCard(
+                        plantilla = plantilla,
+                        onAdd = {
+                            ejerciciosSesion.add(
+                                plantilla.copy(instanceId = UUID.randomUUID().toString())
+                            )
                         }
                     )
                 }
             }
-            PlanificacionState.MINI_PLANIFICACION -> {
-                alumnoSeleccionado?.let { alumno ->
-                    MiniPlanificacionScreen(
-                        alumno = alumno,
-                        onVolver = { currentState = PlanificacionState.FICHA_ALUMNO }
-                    )
+
+            // ---- BOTONES SECUNDARIOS ----
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = { currentState = PlanificacionState.CARTERA },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Icon(Icons.Default.List, contentDescription = "Cartera")
+                    Spacer(Modifier.width(4.dp))
+                    Text("Cartera")
+                }
+
+                Button(
+                    onClick = { currentState = PlanificacionState.VIDEO },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp)
+                ) {
+                    Icon(Icons.Default.Videocam, contentDescription = "Video")
+                    Spacer(Modifier.width(4.dp))
+                    Text("Video")
                 }
             }
 
-            PlanificacionState.FICHA_TECNICA -> {
-                plantillaSeleccionada?.let { plantilla ->
-                    val nuevaInstancia = plantilla.copy(instanceId = UUID.randomUUID().toString())
-                    PlantillaDetailScreen(
-                        plantilla = nuevaInstancia,
-                        onAdd = {
-                            ejerciciosSesion.add(nuevaInstancia)
-                            currentState = PlanificacionState.PRINCIPAL
-                            plantillaSeleccionada = null
-                        },
-                        onVolver = { currentState = PlanificacionState.PRINCIPAL }
-                    )
-                }
+            // ---- BOTÓN GUARDAR ----
+            Button(
+                onClick = onGuardarSesion,
+                enabled = alumnoSeleccionado != null && ejerciciosSesion.isNotEmpty(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .height(50.dp)
+            ) {
+                Text("GUARDAR SESIÓN")
             }
-
-            PlanificacionState.PRINCIPAL -> { /* Pantalla base */ }
         }
+    }
+
+    // -------------------- SUBPANTALLAS --------------------
+    when (currentState) {
+        PlanificacionState.CARTERA -> CarteraScreen(
+            onVolver = { currentState = PlanificacionState.PRINCIPAL },
+            onAbrirFichaAlumno = { alumnoSeleccionado = it }
+        )
+
+        PlanificacionState.VIDEO -> VideoScreen(
+            onVolver = { currentState = PlanificacionState.PRINCIPAL }
+        )
+
+        else -> {}
     }
 }
 
@@ -268,21 +241,35 @@ fun AlumnoSelector(
             .clickable { expanded = true }
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(Icons.Default.List, contentDescription = "Alumno")
-            Spacer(Modifier.width(8.dp))
-            Text(
-                alumnoSeleccionado?.nombre ?: "Seleccionar Alumno...",
-                style = MaterialTheme.typography.titleMedium
+            Column {
+                Text(
+                    text = alumnoSeleccionado?.nombre ?: "Seleccionar Alumno...",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                alumnoSeleccionado?.let {
+                    Text(
+                        text = "Nivel: ${it.nivel} | Objetivo: ${it.objetivo}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "Abrir lista",
+                tint = MaterialTheme.colorScheme.primary
             )
         }
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth(0.9f)
+            onDismissRequest = { expanded = false }
         ) {
             alumnos.forEach { alumno ->
                 DropdownMenuItem(
@@ -297,6 +284,7 @@ fun AlumnoSelector(
     }
 }
 
+// ---- Tarjeta para ejercicio agregado ----
 @Composable
 fun EjercicioCard(
     plantilla: Plantilla,
@@ -320,12 +308,13 @@ fun EjercicioCard(
                 )
             }
             IconButton(onClick = onRemove) {
-                Icon(Icons.Default.Delete, contentDescription = "Eliminar Ejercicio", tint = Color.Red)
+                Icon(Icons.Default.Delete, contentDescription = "Eliminar ejercicio", tint = Color.Red)
             }
         }
     }
 }
 
+// ---- Tarjeta para plantilla disponible ----
 @Composable
 fun PlantillaCard(
     plantilla: Plantilla,
@@ -354,6 +343,8 @@ fun PlantillaCard(
             }
             Button(onClick = onAdd) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir a sesión")
+                Spacer(Modifier.width(6.dp))
+                Text("Añadir")
             }
         }
     }

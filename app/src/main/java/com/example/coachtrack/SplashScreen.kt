@@ -29,9 +29,9 @@ fun SplashScreen(
 
     LaunchedEffect(Unit) {
         showLogo = true
-        delay(2200)
+        delay(3200)
         showText = true
-        delay(2000)
+        delay(3000)
         onSplashFinished()
     }
 
@@ -49,8 +49,8 @@ fun SplashScreen(
             // Logo grande y centrado
             AnimatedVisibility(
                 visible = showLogo,
-                enter = fadeIn(animationSpec = tween(1000)),
-                exit = fadeOut(animationSpec = tween(500))
+                enter = fadeIn(animationSpec = tween(2000)),
+                exit = fadeOut(animationSpec = tween(1000))
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.logo),

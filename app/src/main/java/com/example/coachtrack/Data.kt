@@ -55,9 +55,10 @@ data class Sesion(
 // ------------------ CONVERSOR ENTRE TIPOS ------------------
 
 fun SesionDeClase.toSesion(): Sesion {
+    val listaEjercicios = ejercicios.joinToString(", ") { it.nombre }
     return Sesion(
         id = sessionId,
-        titulo = ejercicios.firstOrNull()?.nombre ?: "Sesión sin título",
+        titulo = "Sesión (${ejercicios.size} ejercicios): $listaEjercicios",
         fecha = fechaCreacion,
         duracionMin = duracionTotalMinutos,
         estado = "Completada"

@@ -56,7 +56,7 @@ fun PantallaPrincipal(
             BotonFuncionalidad("HISTORIAL DE ALUMNOS", "Consulta informes de progreso individual", onHistorialClick)
             Spacer(modifier = Modifier.height(16.dp))
 
-            BotonFuncionalidad("VIDEO ANÁLISIS RÁPIDO", "Graba y envía feedback visual", onVideoAnalisisClick)
+            BotonFuncionalidad("MARKETING  PORTAFOLIO", "Graba y envía feedback visual", onVideoAnalisisClick)
             Spacer(modifier = Modifier.height(40.dp))
 
             // 🔴 Botón de Cerrar Sesión (Simulado)
