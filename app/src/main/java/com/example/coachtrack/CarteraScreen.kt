@@ -9,11 +9,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,10 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -36,16 +37,10 @@ fun CarteraScreen(
     onAbrirFichaAlumno: (Alumnos) -> Unit
 ) {
     var filtro by remember { mutableStateOf("") }
-    var filtroEstado by remember { mutableStateOf<EstadoPago?>(null) }
     var showDashboard by remember { mutableStateOf(false) }
     var showList by remember { mutableStateOf(false) }
-    var showAddDialog by remember { mutableStateOf(false) } // 👈 NUEVO
-    val snackbarHostState = remember { SnackbarHostState() }
 
-    val coroutineScope = rememberCoroutineScope()
-
-
-    // 🔹 Animaciones de entrada
+    // 🔹 Animación secuencial: primero Dashboard, luego Lista
     LaunchedEffect(Unit) {
         delay(300)
         showDashboard = true
@@ -53,65 +48,30 @@ fun CarteraScreen(
         showList = true
     }
 
-    // 🔹 Lista en memoria (mutable)
+    // ---------------- MOCK DE ALUMNOS ----------------
     val alumnos = remember {
         mutableStateListOf(
-            Alumnos(
-                id = "a1",
-                nombre = "Juan Pérez",
-                nivel = "Intermedio",
-                objetivo = "Mejorar saque",
-                clasesPactadas = 8,
-                clasesCursadas = 5,
-                estadoPago = EstadoPago.PENDIENTE,
-                datosPersonales = DatosPersonales(
-                    edad = 28,
-                    sexo = "Masculino",
-                    altura = 180,
-                    peso = 78,
-                    direccion = "Av. Providencia 1000, Santiago",
-                    telefono = "987654321",
-                    email = "juanperez@gmail.com",
-                    fechaNacimiento = "1996-02-18"
-                ),
-                nivelJuego = "Club Amateur"
-            ),
-            Alumnos(
-                id = "a2",
-                nombre = "María López",
-                nivel = "Avanzado",
-                objetivo = "Competencia regional",
-                clasesPactadas = 10,
-                clasesCursadas = 10,
-                estadoPago = EstadoPago.ADELANTADO,
-                datosPersonales = DatosPersonales(
-                    edad = 26,
-                    sexo = "Femenino",
-                    altura = 170,
-                    peso = 65,
-                    direccion = "Calle Los Leones 700",
-                    telefono = "986543210",
-                    email = "maria.lopez@gmail.com",
-                    fechaNacimiento = "1998-05-12"
-                ),
-                nivelJuego = "Torneo local"
-            )
+            Alumnos("a1", "Juan Pérez", "Intermedio", "Mejorar saque", 8, 5, EstadoPago.PENDIENTE),
+            Alumnos("a2", "María López", "Avanzado", "Competencia regional", 10, 10, EstadoPago.DEUDA),
+            Alumnos("a3", "Carlos Ruiz", "Inicial", "Consistencia de revés", 6, 2, EstadoPago.ADELANTADO),
+            Alumnos("a4", "Laura Martínez", "Intermedio", "Velocidad de desplazamiento", 12, 11, EstadoPago.PENDIENTE),
+            Alumnos("a5", "Felipe Gómez", "Inicial", "Aprender técnica de saque", 5, 0, EstadoPago.ADELANTADO),
+            Alumnos("a6", "Diego Díaz", "Intermedio", "Resistencia física", 12, 10, EstadoPago.PENDIENTE),
+            Alumnos("a7", "Pedro Soto", "Intermedio", "Control de bola", 8, 4, EstadoPago.PENDIENTE),
+            Alumnos("a8", "Ana Torres", "Inicial", "Postura básica", 5, 2, EstadoPago.ADELANTADO),
+            Alumnos("a9", "José Morales", "Avanzado", "Táctica de partido", 10, 7, EstadoPago.DEUDA),
+            Alumnos("a10", "Sofía Rivas", "Intermedio", "Regularidad", 7, 5, EstadoPago.ADELANTADO),
+            Alumnos("a11", "Claudio Vega", "Inicial", "Saque con efecto", 6, 3, EstadoPago.PENDIENTE)
         )
     }
 
-    // 🔹 Filtros
-    val alumnosFiltradosPorNombre = alumnos.filter { it.nombre.contains(filtro, ignoreCase = true) }
-    val alumnosFiltrados = alumnosFiltradosPorNombre.filter {
-        filtroEstado == null || it.estadoPago == filtroEstado
-    }
+    val alumnosFiltrados = alumnos.filter { it.nombre.contains(filtro, ignoreCase = true) }
 
     val totalAlumnos = alumnos.size
     val alDia = alumnos.count { it.estadoPago == EstadoPago.ADELANTADO }
     val pendientes = alumnos.count { it.estadoPago == EstadoPago.PENDIENTE }
     val enDeuda = alumnos.count { it.estadoPago == EstadoPago.DEUDA }
 
-
-    // ------------------- UI -------------------
     Scaffold(
         topBar = {
             TopAppBar(
@@ -122,25 +82,14 @@ fun CarteraScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Alumno")
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { pv ->
-
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(pv)
                 .padding(horizontal = 16.dp)
         ) {
-
             // ---------------- BUSCADOR ----------------
             OutlinedTextField(
                 value = filtro,
@@ -171,43 +120,45 @@ fun CarteraScreen(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        DashboardCard(
-                            "Total", totalAlumnos.toString(), Color(0xFF1565C0),
-                            modifier = Modifier.weight(1f)
-                        ) { filtroEstado = null }
-
+                        DashboardCard("Total", totalAlumnos.toString(), Color(0xFF1565C0), Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
-
-                        DashboardCard(
-                            "Al día", alDia.toString(), Color(0xFF2E7D32),
-                            modifier = Modifier.weight(1f)
-                        ) { filtroEstado = EstadoPago.ADELANTADO }
+                        DashboardCard("Al día", alDia.toString(), Color(0xFF2E7D32), Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        DashboardCard(
-                            "Pendientes", pendientes.toString(), Color(0xFFFFA000),
-                            modifier = Modifier.weight(1f)
-                        ) { filtroEstado = EstadoPago.PENDIENTE }
-
+                        DashboardCard("Pendientes", pendientes.toString(), Color(0xFFFFA000), Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
-
-                        DashboardCard(
-                            "Deuda", enDeuda.toString(), Color(0xFFC62828),
-                            modifier = Modifier.weight(1f)
-                        ) { filtroEstado = EstadoPago.DEUDA }
+                        DashboardCard("Deuda", enDeuda.toString(), Color(0xFFC62828), Modifier.weight(1f))
                     }
                 }
             }
 
-            if (filtroEstado != null) {
-                TextButton(
-                    onClick = { filtroEstado = null },
-                    modifier = Modifier.align(Alignment.End)
-                ) { Text("Quitar filtro") }
+            Spacer(Modifier.height(8.dp))
+
+            // ---------------- AVISO ----------------
+            val hayPendientes = (enDeuda + pendientes) > 0
+            val avisoColor by animateColorAsState(
+                if (hayPendientes) Color(0xFFFFCCBC) else Color(0xFFC8E6C9),
+                animationSpec = spring(dampingRatio = 0.7f)
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = avisoColor)
+            ) {
+                Text(
+                    text = if (hayPendientes)
+                        "¡ATENCIÓN! ${enDeuda + pendientes} alumnos con pagos pendientes"
+                    else
+                        "Cartera al día. ¡Excelente!",
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (hayPendientes) Color(0xFFD32F2F) else Color(0xFF388E3C),
+                    textAlign = TextAlign.Center
+                )
             }
 
             Spacer(Modifier.height(8.dp))
@@ -227,6 +178,23 @@ fun CarteraScreen(
                     items(alumnosFiltrados, key = { it.id }) { alumno ->
                         AlumnoCard(
                             alumno = alumno,
+                            onClaseDada = {
+                                if (alumno.clasesCursadas < alumno.clasesPactadas) {
+                                    val index = alumnos.indexOf(alumno)
+                                    alumnos[index] = alumno.copy(
+                                        clasesCursadas = alumno.clasesCursadas + 1,
+                                        estadoPago = if (alumno.clasesCursadas + 1 >= alumno.clasesPactadas)
+                                            EstadoPago.PENDIENTE else alumno.estadoPago
+                                    )
+                                }
+                            },
+                            onPagoRegistrar = {
+                                val index = alumnos.indexOf(alumno)
+                                alumnos[index] = alumno.copy(estadoPago = EstadoPago.ADELANTADO)
+                            },
+                            onContactoRapido = {
+                                println("Enviando WhatsApp a ${alumno.nombre}")
+                            },
                             onAbrirFichaAlumno = { onAbrirFichaAlumno(alumno) }
                         )
                     }
@@ -243,147 +211,18 @@ fun CarteraScreen(
                 Text("Volver")
             }
         }
-
-        // ---------------- DIALOGO AGREGAR ALUMNO ----------------
-        if (showAddDialog) {
-            Dialog(onDismissRequest = { showAddDialog = false }) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    // Estados de cada campo
-                    var nombre by remember { mutableStateOf("") }
-                    var nivel by remember { mutableStateOf("") }
-                    var objetivo by remember { mutableStateOf("") }
-                    var edad by remember { mutableStateOf("") }
-                    var telefono by remember { mutableStateOf("") }
-                    var direccion by remember { mutableStateOf("") }
-                    var email by remember { mutableStateOf("") }
-                    var sexo by remember { mutableStateOf("") }
-                    var nivelJuego by remember { mutableStateOf("") }
-
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            "Agregar nuevo alumno",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        // -------------- Datos básicos --------------
-                        OutlinedTextField(
-                            value = nombre,
-                            onValueChange = { nombre = it },
-                            label = { Text("Nombre completo") })
-                        OutlinedTextField(
-                            value = nivel,
-                            onValueChange = { nivel = it },
-                            label = { Text("Nivel actual") })
-                        OutlinedTextField(
-                            value = objetivo,
-                            onValueChange = { objetivo = it },
-                            label = { Text("Objetivo principal") })
-
-                        // -------------- Datos personales --------------
-                        Divider(Modifier.padding(vertical = 8.dp))
-                        Text("Datos personales", fontWeight = FontWeight.SemiBold)
-                        OutlinedTextField(
-                            value = edad,
-                            onValueChange = { edad = it },
-                            label = { Text("Edad") },
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = sexo,
-                            onValueChange = { sexo = it },
-                            label = { Text("Sexo") },
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = telefono,
-                            onValueChange = { telefono = it },
-                            label = { Text("Teléfono") })
-                        OutlinedTextField(
-                            value = direccion,
-                            onValueChange = { direccion = it },
-                            label = { Text("Dirección") })
-                        OutlinedTextField(
-                            value = email,
-                            onValueChange = { email = it },
-                            label = { Text("Correo electrónico") })
-                        OutlinedTextField(
-                            value = nivelJuego,
-                            onValueChange = { nivelJuego = it },
-                            label = { Text("Nivel de juego") })
-
-                        Spacer(Modifier.height(12.dp))
-
-                        // -------------- Botones --------------
-                        Row(
-                            horizontalArrangement = Arrangement.End,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            TextButton(onClick = { showAddDialog = false }) {
-                                Text("Cancelar")
-                            }
-                            Button(onClick = {
-                                if (nombre.isNotBlank()) {
-                                    alumnos.add(
-                                        Alumnos(
-                                            id = "a${alumnos.size + 1}",
-                                            nombre = nombre,
-                                            nivel = nivel,
-                                            objetivo = objetivo,
-                                            clasesPactadas = 0,
-                                            clasesCursadas = 0,
-                                            estadoPago = EstadoPago.PENDIENTE,
-                                            datosPersonales = DatosPersonales(
-                                                edad = edad.toIntOrNull() ?: 0,
-                                                sexo = sexo,
-                                                telefono = telefono,
-                                                direccion = direccion,
-                                                email = email
-                                            ),
-                                            nivelJuego = nivelJuego
-                                        )
-                                    )
-                                    showAddDialog = false
-
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Alumno agregado correctamente")
-                                    }
-                                }
-                            }) {
-                                Text("Guardar")
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
-
 // ---------------- DASHBOARD CARD ----------------
 @Composable
-fun DashboardCard(
-    title: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
+fun DashboardCard(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.clickable { onClick() },
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f))
     ) {
         Column(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -398,6 +237,9 @@ fun DashboardCard(
 @Composable
 fun AlumnoCard(
     alumno: Alumnos,
+    onClaseDada: () -> Unit,
+    onPagoRegistrar: () -> Unit,
+    onContactoRapido: () -> Unit,
     onAbrirFichaAlumno: (Alumnos) -> Unit
 ) {
     val progresoAnimado by animateFloatAsState(
@@ -405,11 +247,14 @@ fun AlumnoCard(
         animationSpec = spring(dampingRatio = 0.7f)
     )
 
-    val colorEstado = when (alumno.estadoPago) {
-        EstadoPago.ADELANTADO -> Color(0xFF4CAF50)
-        EstadoPago.PENDIENTE -> Color(0xFFFFC107)
-        EstadoPago.DEUDA -> Color(0xFFF44336)
-    }
+    val colorEstado by animateColorAsState(
+        when (alumno.estadoPago) {
+            EstadoPago.ADELANTADO -> Color(0xFF4CAF50)
+            EstadoPago.PENDIENTE -> Color(0xFFFFC107)
+            EstadoPago.DEUDA -> Color(0xFFF44336)
+        },
+        animationSpec = spring(dampingRatio = 0.7f)
+    )
 
     Card(
         modifier = Modifier
@@ -449,6 +294,24 @@ fun AlumnoCard(
                         color = colorEstado,
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onClaseDada, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Clase")
+                }
+                Button(onClick = onPagoRegistrar, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.Payment, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Pagar")
+                }
+                if (alumno.estadoPago != EstadoPago.ADELANTADO) {
+                    IconButton(onClick = onContactoRapido) {
+                        Icon(Icons.Default.Send, null, tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         }
