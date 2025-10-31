@@ -1,9 +1,15 @@
 package com.example.coachtrack
 
+import com.example.coachtrack.DatosPersonales
+import com.example.coachtrack.Sesion
+import com.example.coachtrack.Tactica
+
+
+
 data class Alumnos(
     val id: String,
     val nombre: String,
-    val nivel: String,
+
     val objetivo: String? = null,
     val clasesPactadas: Int = 0,
     val clasesCursadas: Int = 0,
@@ -12,10 +18,8 @@ data class Alumnos(
     val fechaInicio: String? = null,
     val sesiones: List<Sesion> = emptyList(),
     val tacticas: List<Tactica> = emptyList(),
-
-    // 🔗 Referencia al nuevo modelo
     val datosPersonales: DatosPersonales = DatosPersonales(),
-    val nivelJuego: String = ""
+    val nivelActual: String = ""
 ) {
     val progreso: Int
         get() = if (clasesPactadas > 0)

@@ -11,13 +11,13 @@ class FichaAlumnoViewModel : ViewModel() {
 
         id = "",
         nombre = "",
-        nivel = "",
+        nivelActual = "",
         objetivo = "",
         clasesPactadas = 0,
         clasesCursadas = 0,
         estadoPago = EstadoPago.PENDIENTE,
         datosPersonales = DatosPersonales(),
-        nivelJuego = ""
+
 
     ))
             val alumno: LiveData<Alumnos> = _alumno

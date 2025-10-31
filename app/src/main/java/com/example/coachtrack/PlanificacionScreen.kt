@@ -1,5 +1,6 @@
 package com.example.coachtrack
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +17,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -39,18 +44,46 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // -------------------- ViewModel: traemos los alumnos reales desde Room --------------------
+    val context = LocalContext.current
+    val viewModel: CarteraViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return CarteraViewModel(context.applicationContext as Application) as T
+            }
+        }
+    )
+
+    // Observamos los alumnos reales en la base de datos
+    val alumnosRoom by viewModel.alumnos.collectAsState(initial = emptyList())
+
+    // Mapeamos AlumnoEntity -> Alumnos (modelo de dominio)
+    val alumnos = alumnosRoom.map { entity ->
+        Alumnos(
+            id = entity.id.toString(),
+            nombre = entity.nombre,
+            nivelActual = entity.nivelActual,
+            objetivo = entity.objetivo,
+            clasesPactadas = entity.clasesPactadas,
+            clasesCursadas = entity.clasesCursadas,
+            estadoPago = EstadoPago.valueOf(entity.estadoPago),
+            datosPersonales = DatosPersonales(
+                edad = entity.edad,
+                telefono = entity.telefono,
+                direccion = entity.direccion
+            )
+        )
+    }
+
     // -------------------- LÓGICA DE GUARDADO --------------------
     val onGuardarSesion: () -> Unit = {
         val alumno = alumnoSeleccionado
 
         if (alumno == null) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Debe seleccionar un alumno.")
-            }
+            scope.launch { snackbarHostState.showSnackbar("Debe seleccionar un alumno.") }
         } else if (ejerciciosSesion.isEmpty()) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Debe añadir al menos una plantilla.")
-            }
+            scope.launch { snackbarHostState.showSnackbar("Debe añadir al menos una plantilla.") }
         } else {
             try {
                 val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm")
@@ -65,24 +98,10 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                     ejercicios = ejerciciosSesion.toList().toMutableList()
                 )
 
-                // 🔹 Actualiza la lista global simulada
                 val sesionesCopia = getMockSesionesGuardadas().toMutableList()
                 sesionesCopia.add(0, nuevaSesion)
                 SESIONES_GUARDADAS.clear()
                 SESIONES_GUARDADAS.addAll(sesionesCopia)
-
-                // 🔹 (Opcional) Reflejar en HistorialScreen si usas el repositorio mock
-                runCatching {
-                    SesionRepository.agregarSesion(
-                        Sesion(
-                            id = nuevaSesion.sessionId,
-                            titulo = "Sesión de ${alumno.nombre}",
-                            fecha = nuevaSesion.fechaCreacion,
-                            duracionMin = nuevaSesion.duracionTotalMinutos,
-                            estado = "Completada"
-                        )
-                    )
-                }
 
                 scope.launch {
                     snackbarHostState.showSnackbar("Sesión guardada con éxito para ${alumno.nombre}.")
@@ -119,10 +138,10 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                 .padding(pv)
                 .padding(horizontal = 16.dp)
         ) {
-            // ---- SELECCIÓN DE ALUMNO ----
+            // ---- SELECCIÓN DE ALUMNO (ahora usa lista real) ----
             AlumnoSelector(
                 alumnoSeleccionado = alumnoSeleccionado,
-                alumnos = remember { getMockAlumnos() },
+                alumnos = alumnos, // ✅ lista de Room, ya no mock
                 onAlumnoSelected = { alumnoSeleccionado = it }
             )
 
@@ -254,7 +273,7 @@ fun AlumnoSelector(
                 )
                 alumnoSeleccionado?.let {
                     Text(
-                        text = "Nivel: ${it.nivel} | Objetivo: ${it.objetivo}",
+                        text = "Nivel: ${it.nivelActual} | Objetivo: ${it.objetivo}",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )

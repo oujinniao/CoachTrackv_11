@@ -133,7 +133,7 @@ fun getMockAlumnos(): List<Alumnos> {
         Alumnos(
             id = "a1",
             nombre = "Juan Pérez",
-            nivel = "Intermedio",
+            nivelActual = "Intermedio",
             objetivo = "Estabilidad del tobillo",
             clasesPactadas = 10,
             clasesCursadas = 8,
@@ -144,7 +144,7 @@ fun getMockAlumnos(): List<Alumnos> {
         Alumnos(
             id = "a2",
             nombre = "María García",
-            nivel = "Avanzado",
+            nivelActual = "Avanzado",
             objetivo = "Mejorar el Toss",
             clasesPactadas = 5,
             clasesCursadas = 5,
@@ -154,7 +154,7 @@ fun getMockAlumnos(): List<Alumnos> {
         Alumnos(
             id = "a3",
             nombre = "Carlos Gómez",
-            nivel = "Intermedio",
+            nivelActual = "Intermedio",
             objetivo = "Ser más constante",
             clasesPactadas = 12,
             clasesCursadas = 1,
@@ -164,7 +164,7 @@ fun getMockAlumnos(): List<Alumnos> {
         Alumnos(
             id = "a4",
             nombre = "Laura Fernández",
-            nivel = "Inicial",
+            nivelActual = "Inicial",
             objetivo = "Reforzar técnica de revés",
             clasesPactadas = 8,
             clasesCursadas = 3,

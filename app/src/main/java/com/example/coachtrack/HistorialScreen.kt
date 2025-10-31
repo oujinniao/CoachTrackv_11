@@ -29,10 +29,11 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Historial de Sesiones") },
+                title = { Text(" Historial de Sesiones") },
                 navigationIcon = {
                     IconButton(onClick = onVolverClick) {
-                        Text("Atrás")
+                        Text("Atrás",
+                            style = MaterialTheme.typography.labelMedium)
                     }
                 }
             )

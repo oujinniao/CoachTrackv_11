@@ -1,31 +1,20 @@
 package com.example.coachtrack
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.coachtrack.Alumnos
-import com.example.coachtrack.EstadoPago
-import com.example.coachtrack.DatosPersonales
-import com.example.coachtrack.FichaAlumnoViewModel
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +24,13 @@ fun FichaAlumnoScreen(
     onNuevaSesionClick: (Alumnos) -> Unit,
     viewModel: FichaAlumnoViewModel = viewModel()
 ) {
-    // Estado local del alumno
-    var alumno by remember { mutableStateOf(alumnoInicial) }
+    // Al abrir la ficha, actualizamos los datos personales
+    LaunchedEffect(alumnoInicial) {
+        viewModel.actualizarDatosPersonales(alumnoInicial.datosPersonales)
+    }
+
+    val alumnoState by viewModel.alumno.observeAsState(alumnoInicial)
+    var alumno by remember { mutableStateOf(alumnoState) }
     var selectedTab by remember { mutableStateOf(0) }
     var notas by remember { mutableStateOf(alumno.notasEntrenador) }
     var editandoNotas by remember { mutableStateOf(false) }
@@ -55,10 +49,9 @@ fun FichaAlumnoScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { onNuevaSesionClick(alumno) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Edit, contentDescription = "Nueva Sesión")
+                Icon(Icons.Default.Edit, contentDescription = "Nueva sesión")
             }
         }
     ) { padding ->
@@ -67,7 +60,7 @@ fun FichaAlumnoScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // ------------------ Encabezado con progreso ------------------
+            // ---------------- ENCABEZADO ----------------
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -80,7 +73,7 @@ fun FichaAlumnoScreen(
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(alumno.nivel, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Text(alumno.nivelActual, fontWeight = FontWeight.Bold, color = Color.Gray)
                     Spacer(Modifier.height(8.dp))
                     CircularProgressIndicator(
                         progress = alumno.progreso / 100f,
@@ -88,16 +81,9 @@ fun FichaAlumnoScreen(
                         modifier = Modifier.size(80.dp)
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "${alumno.progreso}% completado",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Clases ${alumno.clasesCursadas} / ${alumno.clasesPactadas}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.DarkGray
-                    )
-                    Spacer(Modifier.height(4.dp))
+                    Text("${alumno.progreso}% completado", fontSize = 18.sp)
+                    Text("Clases ${alumno.clasesCursadas} / ${alumno.clasesPactadas}")
+                    Spacer(Modifier.height(6.dp))
                     Text(
                         "Estado de pago: ${alumno.estadoPago}",
                         color = when (alumno.estadoPago) {
@@ -110,9 +96,8 @@ fun FichaAlumnoScreen(
                 }
             }
 
-            // ------------------ Tabs ------------------
+            // ---------------- TABS ----------------
             val tabs = listOf("Resumen", "Sesiones", "Tácticas")
-
             TabRow(selectedTabIndex = selectedTab) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -125,41 +110,56 @@ fun FichaAlumnoScreen(
 
             when (selectedTab) {
                 0 -> {
-                    // ------------------ TAB 1: RESUMEN ------------------
+                    // ---------------- TAB RESUMEN ----------------
                     Column(
                         Modifier
                             .fillMaxSize()
-                            .padding(16.dp)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // --- Datos personales (nuevos campos) ---
                         Text("Edad: ${alumno.datosPersonales.edad}")
                         Text("Altura: ${alumno.datosPersonales.altura} cm")
                         Text("Peso: ${alumno.datosPersonales.peso} kg")
                         Text("Dirección: ${alumno.datosPersonales.direccion}")
                         Text("Teléfono: ${alumno.datosPersonales.telefono}")
                         Text("Email: ${alumno.datosPersonales.email}")
-                        Text("Fecha de Nacimiento: ${alumno.datosPersonales.fechaNacimiento}")
-                        Text("Nivel de juego: ${alumno.nivelJuego}")
 
+                        // 🔹 Campo interactivo: Nivel actual con menú desplegable
                         Spacer(Modifier.height(12.dp))
+
+                        Text("Nivel actual:", fontWeight = FontWeight.Bold)
+                        var nivelActual by remember { mutableStateOf(alumno.nivelActual) }
+
+                        NivelActualSelector(
+                            nivelActual = nivelActual,
+                            onNivelChange = { nuevoNivel ->
+                                nivelActual = nuevoNivel
+                                alumno = alumno.copy(nivelActual = nuevoNivel)
+                                viewModel.guardarAlumno()
+                            }
+                        )
+
+                        Spacer(Modifier.height(16.dp))
                         Text(
                             "Objetivo: ${alumno.objetivo ?: "Sin objetivo definido"}",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(Modifier.height(12.dp))
 
+                        // --- Notas del entrenador ---
                         Text("Notas del entrenador:", fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(4.dp))
-
                         if (editandoNotas) {
                             OutlinedTextField(
                                 value = notas,
                                 onValueChange = { notas = it },
-                                modifier = Modifier.fillMaxWidth().height(120.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
                             )
                             Spacer(Modifier.height(8.dp))
                             Button(onClick = {
                                 alumno = alumno.copy(notasEntrenador = notas)
+                                viewModel.guardarAlumno()
                                 editandoNotas = false
                             }) {
                                 Icon(Icons.Default.Save, contentDescription = "Guardar")
@@ -181,10 +181,20 @@ fun FichaAlumnoScreen(
                     }
                 }
 
-                1 -> { /* Tab de sesiones (idéntico a tu código) */ }
-                2 -> { /* Tab de tácticas (idéntico a tu código) */ }
+                1 -> {
+                    // ---------------- TAB SESIONES ----------------
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No hay sesiones registradas todavía.")
+                    }
+                }
+
+                2 -> {
+                    // ---------------- TAB TÁCTICAS ----------------
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No hay tácticas registradas.")
+                    }
+                }
             }
         }
     }
 }
-

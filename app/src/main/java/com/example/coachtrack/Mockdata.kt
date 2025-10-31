@@ -3,7 +3,7 @@ package com.example.coachtrack
 val alumnoLuis=Alumnos(
     id = "a1",
     nombre = "Luis Rojas",
-    nivel = "Intermedio",
+    nivelActual = "Intermedio",
     objetivo = "Mejorar saque",
     clasesPactadas = 10,
     clasesCursadas = 5,
@@ -20,4 +20,4 @@ val alumnoLuis=Alumnos(
         email = "luis.rojas@example-pet-store.com",
         fechaNacimiento = "2000-05-15",
         ),
-    nivelJuego = "Amateur")
+    )
