@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import kotlinx.coroutines.flow.Flow
 import kotlin.jvm.java
+import com.example.coachtrack.AlumnoEntity
+import com.example.coachtrack.CoachTrackDatabase
 
 class AlumnoRepository(context: Context) {
 

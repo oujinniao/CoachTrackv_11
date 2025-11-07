@@ -1,12 +1,26 @@
 package com.example.coachtrack
 
 import android.app.Application
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -14,8 +28,31 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,8 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -43,16 +80,13 @@ fun CarteraScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    // ViewModel + Room
+    // ViewModel
     val context = LocalContext.current
     val viewModel: CarteraViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return CarteraViewModel(context.applicationContext as Application) as T
-            }
-        }
+        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+            .getInstance(context.applicationContext as Application)
     )
+
     val alumnosRoom by viewModel.alumnos.collectAsState()
 
     // Animaciones al cargar
@@ -66,9 +100,9 @@ fun CarteraScreen(
     // Filtros y métricas
     val alumnosFiltrados = alumnosRoom.filter { it.nombre.contains(filtro, ignoreCase = true) }
     val totalAlumnos = alumnosRoom.size
-    val alDia = alumnosRoom.count { it.estadoPago == EstadoPago.ADELANTADO.name }
-    val pendientes = alumnosRoom.count { it.estadoPago == EstadoPago.PENDIENTE.name }
-    val enDeuda = alumnosRoom.count { it.estadoPago == EstadoPago.DEUDA.name }
+    val alDia = alumnosRoom.count { it.estadoPago == EstadoPago.ADELANTADO }
+    val pendientes = alumnosRoom.count { it.estadoPago == EstadoPago.PENDIENTE }
+    val enDeuda = alumnosRoom.count { it.estadoPago == EstadoPago.DEUDA }
 
     Scaffold(
         topBar = {
@@ -90,12 +124,12 @@ fun CarteraScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { pv ->
+    ) { paddingValues ->
 
         Column(
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(pv)
+                .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
             // ---------------- BUSCADOR ----------------
@@ -118,22 +152,28 @@ fun CarteraScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Resumen general", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         DashboardCard("Total", totalAlumnos.toString(), Color(0xFF1565C0), Modifier.weight(1f))
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         DashboardCard("Al día", alDia.toString(), Color(0xFF2E7D32), Modifier.weight(1f))
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         DashboardCard("Pendientes", pendientes.toString(), Color(0xFFFFA000), Modifier.weight(1f))
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         DashboardCard("Deuda", enDeuda.toString(), Color(0xFFC62828), Modifier.weight(1f))
                     }
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // ---------------- LISTA DE ALUMNOS ----------------
             AnimatedVisibility(
@@ -156,12 +196,13 @@ fun CarteraScreen(
                             objetivo = entity.objetivo,
                             clasesPactadas = entity.clasesPactadas,
                             clasesCursadas = entity.clasesCursadas,
-                            estadoPago = EstadoPago.valueOf(entity.estadoPago),
+                            estadoPago = entity.estadoPago,
                             datosPersonales = DatosPersonales(
                                 edad = entity.edad,
                                 telefono = entity.telefono,
                                 direccion = entity.direccion
-                            )
+                            ),
+                            notasEntrenador = entity.notasEntrenador
                         )
 
                         AlumnoCard(
@@ -200,7 +241,7 @@ fun CarteraScreen(
                     var direccion by remember { mutableStateOf("") }
 
                     Column(
-                        Modifier.padding(16.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text("Agregar nuevo alumno", style = MaterialTheme.typography.titleLarge)
@@ -208,10 +249,11 @@ fun CarteraScreen(
                         OutlinedTextField(
                             value = nombre,
                             onValueChange = { nombre = it },
-                            label = { Text("Nombre completo") }
+                            label = { Text("Nombre completo") },
+                            modifier = Modifier.fillMaxWidth()
                         )
 
-                        // 🔹 Campo desplegable (solo uno)
+                        // Campo desplegable para nivel actual
                         NivelActualSelector(
                             nivelActual = nivelActual,
                             onNivelChange = { nuevoNivel -> nivelActual = nuevoNivel }
@@ -220,20 +262,38 @@ fun CarteraScreen(
                         OutlinedTextField(
                             value = objetivo,
                             onValueChange = { objetivo = it },
-                            label = { Text("Objetivo principal") }
+                            label = { Text("Objetivo principal") },
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Divider()
 
-                        OutlinedTextField(value = edad, onValueChange = { edad = it }, label = { Text("Edad") })
-                        OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") })
-                        OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") })
+                        OutlinedTextField(
+                            value = edad,
+                            onValueChange = { edad = it },
+                            label = { Text("Edad") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = telefono,
+                            onValueChange = { telefono = it },
+                            label = { Text("Teléfono") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = direccion,
+                            onValueChange = { direccion = it },
+                            label = { Text("Dirección") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         Row(
                             horizontalArrangement = Arrangement.End,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            TextButton(onClick = { showAddDialog = false }) { Text("Cancelar") }
+                            TextButton(onClick = { showAddDialog = false }) {
+                                Text("Cancelar")
+                            }
                             Button(onClick = {
                                 if (nombre.isNotBlank()) {
                                     viewModel.agregarAlumno(
@@ -243,7 +303,7 @@ fun CarteraScreen(
                                             objetivo = objetivo,
                                             clasesPactadas = 0,
                                             clasesCursadas = 0,
-                                            estadoPago = EstadoPago.PENDIENTE.name,
+                                            estadoPago = EstadoPago.PENDIENTE,
                                             edad = edad.toIntOrNull() ?: 0,
                                             telefono = telefono,
                                             direccion = direccion,
@@ -301,10 +361,13 @@ fun AlumnoCard(alumno: Alumnos, onAbrirFichaAlumno: (Alumnos) -> Unit) {
             .padding(vertical = 6.dp)
             .clickable { onAbrirFichaAlumno(alumno) }
     ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(alumno.nombre, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = alumno.nombre,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            )
             LinearProgressIndicator(
-                progress = { progresoAnimado },
+                progress = progresoAnimado,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
@@ -313,7 +376,7 @@ fun AlumnoCard(alumno: Alumnos, onAbrirFichaAlumno: (Alumnos) -> Unit) {
                 color = MaterialTheme.colorScheme.primary
             )
             Text("Clases: ${alumno.clasesCursadas}/${alumno.clasesPactadas}", style = MaterialTheme.typography.bodySmall)
-            Text("Estado de pago: ${alumno.estadoPago}", style = MaterialTheme.typography.bodySmall)
+            Text("Estado de pago: ${alumno.estadoPago.name}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

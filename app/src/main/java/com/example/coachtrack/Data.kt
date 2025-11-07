@@ -2,6 +2,7 @@ package com.example.coachtrack
 
 import java.util.UUID
 
+
 // ------------------ ESTRUCTURAS DE DATOS ------------------
 
 data class Plantilla(
@@ -44,7 +45,7 @@ data class SesionDeClase(
 
 // ------------------ SESIÓN SIMPLE (para ficha de alumno) ------------------
 
-data class Sesion(
+data class SesionSimple(
     val id: String,          // identificador interno (sessionId en Data)
     val titulo: String,      // nombre o tema de la sesión
     val fecha: String,       // fecha de realización
@@ -54,9 +55,9 @@ data class Sesion(
 
 // ------------------ CONVERSOR ENTRE TIPOS ------------------
 
-fun SesionDeClase.toSesion(): Sesion {
+fun SesionDeClase.toSesion(): SesionSimple {
     val listaEjercicios = ejercicios.joinToString(", ") { it.nombre }
-    return Sesion(
+    return SesionSimple(
         id = sessionId,
         titulo = "Sesión (${ejercicios.size} ejercicios): $listaEjercicios",
         fecha = fechaCreacion,
@@ -125,53 +126,53 @@ fun getMockSesionesGuardadas(): MutableList<SesionDeClase> = SESIONES_GUARDADAS
 // ------------------ ALUMNOS MOCK ------------------
 
 fun getMockAlumnos(): List<Alumnos> {
-    val sesionesJuan = getMockSesionesGuardadas()
-        .filter { it.alumnoNombre == "Juan Pérez" }
-        .map { it.toSesion() }
+    //  val sesionesJuan = getMockSesionesGuardadas()
+    //    .filter { it.alumnoNombre == "Juan Pérez" }
+    //  .map { it.toSesion() }
 
-    return listOf(
-        Alumnos(
-            id = "a1",
-            nombre = "Juan Pérez",
-            nivelActual = "Intermedio",
-            objetivo = "Estabilidad del tobillo",
-            clasesPactadas = 10,
-            clasesCursadas = 8,
-            estadoPago = EstadoPago.ADELANTADO,
-            notasEntrenador = "Trabajar en la estabilidad del tobillo izquierdo.",
-            sesiones = sesionesJuan
-        ),
-        Alumnos(
-            id = "a2",
-            nombre = "María García",
-            nivelActual = "Avanzado",
-            objetivo = "Mejorar el Toss",
-            clasesPactadas = 5,
-            clasesCursadas = 5,
-            estadoPago = EstadoPago.ADELANTADO,
-            notasEntrenador = "Mucha motivación, pero necesita centrarse en el Toss."
-        ),
-        Alumnos(
-            id = "a3",
-            nombre = "Carlos Gómez",
-            nivelActual = "Intermedio",
-            objetivo = "Ser más constante",
-            clasesPactadas = 12,
-            clasesCursadas = 1,
-            estadoPago = EstadoPago.DEUDA,
-            notasEntrenador = "No ha pagado el último mes. Contactar urgente."
-        ),
-        Alumnos(
-            id = "a4",
-            nombre = "Laura Fernández",
-            nivelActual = "Inicial",
-            objetivo = "Reforzar técnica de revés",
-            clasesPactadas = 8,
-            clasesCursadas = 3,
-            estadoPago = EstadoPago.PENDIENTE,
-            notasEntrenador = "Pendiente de respuesta para la renovación de paquete."
-        )
-    )
+    //return listOf(
+    //  Alumnos(
+    //    id = "a1",
+    //  nombre = "Juan Pérez",
+    //nivelActual = "Intermedio",
+    //objetivo = "Estabilidad del tobillo",
+    //clasesPactadas = 10,
+    // clasesCursadas = 8,
+    //estadoPago = EstadoPago.ADELANTADO,
+    //notasEntrenador = "Trabajar en la estabilidad del tobillo izquierdo.",
+    //sesiones = sesionesJuan
+    //),
+    //Alumnos(
+    //  id = "a2",
+    //nombre = "María García",
+    // nivelActual = "Avanzado",
+    // objetivo = "Mejorar el Toss",
+    //clasesPactadas = 5,
+    //clasesCursadas = 5,
+    //estadoPago = EstadoPago.ADELANTADO,
+    //notasEntrenador = "Mucha motivación, pero necesita centrarse en el Toss."
+    // ),
+    //Alumnos(
+    //  id = "a3",
+    //nombre = "Carlos Gómez",
+    //nivelActual = "Intermedio",
+    // objetivo = "Ser más constante",
+    //clasesPactadas = 12,
+    //clasesCursadas = 1,
+    //estadoPago = EstadoPago.DEUDA,
+    //notasEntrenador = "No ha pagado el último mes. Contactar urgente."
+    //),
+    //Alumnos(
+    // id = "a4",
+    // nombre = "Laura Fernández",
+    //nivelActual = "Inicial",
+    // objetivo = "Reforzar técnica de revés",
+    //clasesPactadas = 8,
+    //clasesCursadas = 3,
+    //estadoPago = EstadoPago.PENDIENTE,
+    //notasEntrenador = "Pendiente de respuesta para la renovación de paquete."
+    //)
+    //)
 }
 
 // ------------------ HELPERS ------------------
