@@ -15,8 +15,9 @@ fun PantallaPrincipal(
     onPlanificarClick: () -> Unit,
     onHistorialClick: () -> Unit,
     onVideoAnalisisClick: () -> Unit,
+    onCarteraClick: () -> Unit,
     userId: String,
-    firebaseManager: FakeFirebaseManager
+    //firebaseManager: FakeFirebaseManager
 ) {
     Scaffold(
         topBar = { TopAppBarPrincipal() }
@@ -53,13 +54,17 @@ fun PantallaPrincipal(
             BotonFuncionalidad("PLANIFICAR SESIÓN", "Crea tu clase en 2 clics", onPlanificarClick)
             Spacer(modifier = Modifier.height(16.dp))
 
+            BotonFuncionalidad("CARTERA DE ALUMNOS", "Gestiona pagos y estado de alumnos", onCarteraClick)
+            Spacer(modifier = Modifier.height(16.dp))
+
             BotonFuncionalidad("HISTORIAL DE ALUMNOS", "Consulta informes de progreso individual", onHistorialClick)
             Spacer(modifier = Modifier.height(16.dp))
 
             BotonFuncionalidad("MARKETING  PORTAFOLIO", "Graba y envía feedback visual", onVideoAnalisisClick)
-            Spacer(modifier = Modifier.height(40.dp))
 
-            // 🔴 Botón de Cerrar Sesión (Simulado)
+            // ❌ COMENTA TEMPORALMENTE EL BOTÓN DE LOGOUT HASTA QUE IMPLEMENTES EL MÉTODO
+            /*
+            Spacer(modifier = Modifier.height(40.dp))
             OutlinedButton(
                 onClick = { firebaseManager.logout() },
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -73,6 +78,7 @@ fun PantallaPrincipal(
                 Spacer(Modifier.width(8.dp))
                 Text("Cerrar sesión", fontWeight = FontWeight.Bold)
             }
+            */
         }
     }
 }

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(
+fun CoachTrackSplashScreen(  // ✅ CAMBIA EL NOMBRE AQUÍ
     onSplashFinished: () -> Unit
 ) {
     var showLogo by remember { mutableStateOf(false) }
@@ -56,7 +56,7 @@ fun SplashScreen(
                     painter = painterResource(id = R.drawable.logo),
                     contentDescription = "Logo CoachTrack",
                     modifier = Modifier
-                        .size(200.dp) // ⬅️ Logo más grande
+                        .size(200.dp)
                         .padding(12.dp)
                 )
             }
@@ -72,7 +72,7 @@ fun SplashScreen(
                     Text(
                         text = "CoachTrack",
                         color = Color.White,
-                        fontSize = 42.sp, // ⬅️ Más grande
+                        fontSize = 42.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp
                     )
@@ -80,7 +80,7 @@ fun SplashScreen(
                     Text(
                         text = "Planea menos, enseña más",
                         color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 18.sp, // ⬅️ Más legible
+                        fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium
                     )

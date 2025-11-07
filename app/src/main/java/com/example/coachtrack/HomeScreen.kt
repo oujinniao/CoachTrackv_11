@@ -1,5 +1,6 @@
 package com.example.coachtrack
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,11 +12,14 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -23,17 +27,36 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onPlanificacionClick: () -> Unit,
-    onVideoClick: () -> Unit
+    onVideoClick: () -> Unit,
+    onCarteraClick: () -> Unit // Agregar este parámetro para navegar a cartera
 ) {
-    // Carga de datos
-    val sesionesGuardadas = getMockSesionesGuardadas()
-    val alumnos = remember { getMockAlumnos() }
+    // ViewModel para datos reales
+    val context = LocalContext.current
+    val viewModel: CarteraViewModel = viewModel(
+        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+            .getInstance(context.applicationContext as Application)
+    )
 
-    // Cálculo de deuda
+    val alumnos by viewModel.alumnos.collectAsState()
+
+    // Cálculo de deuda con datos reales
     val alumnosConDeuda = alumnos.filter { it.estadoPago == EstadoPago.DEUDA }
     val alumnosPendientes = alumnos.filter { it.estadoPago == EstadoPago.PENDIENTE }
     val totalAlertas = alumnosConDeuda.size + alumnosPendientes.size
     val colorAlerta = if (alumnosConDeuda.isNotEmpty()) Color(0xFFE53935) else Color(0xFFFFC107)
+
+    // Sesiones de ejemplo temporal (puedes reemplazar con datos reales después)
+    val sesionesEjemplo = remember {
+        listOf(
+            SesionDeClase(
+                sessionId = "s1",
+                fechaCreacion = "2025-01-15 10:00",
+                alumnoNombre = "Ejemplo Alumno",
+                duracionTotalMinutos = 60,
+                ejercicios = mutableListOf()
+            )
+        )
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("CoachTrack - Tablero de Control") }) }
@@ -45,7 +68,7 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            // 1. Botón de Acción Principal (Enfoque en la eficiencia)
+            // 1. Botón de Acción Principal
             item {
                 Button(
                     onClick = onPlanificacionClick,
@@ -61,12 +84,12 @@ fun HomeScreen(
                 }
             }
 
-            // 2. Alerta de Cartera (El dinero es prioridad)
+            // 2. Alerta de Cartera (ahora navega a cartera)
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(onClick = onPlanificacionClick) // Alerta clic lleva a planificación/cartera
+                        .clickable(onClick = onCarteraClick) // Ahora va a cartera
                         .padding(bottom = 16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (totalAlertas > 0) colorAlerta.copy(alpha = 0.1f) else MaterialTheme.colorScheme.secondaryContainer
@@ -104,7 +127,7 @@ fun HomeScreen(
                 }
             }
 
-            // 3. Botón de Video - ¡RENOMBRADO!
+            // 3. Botón de Video
             item {
                 Button(
                     onClick = onVideoClick,
@@ -115,36 +138,45 @@ fun HomeScreen(
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    // Nuevo nombre para diferenciar su función de acceso rápido
                     Text("INICIAR GRABACIÓN Y ANÁLISIS", style = MaterialTheme.typography.titleMedium)
                 }
             }
 
-            // 4. Historial de Sesiones Recientes
+            // 4. Resumen de Alumnos
             item {
                 Text(
-                    "Últimas Sesiones Guardadas:",
+                    "Resumen de Alumnos:",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
 
-            items(sesionesGuardadas.take(3), key = { it.sessionId }) { sesion ->
-                SesionGuardadaCard(sesion)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Total de alumnos: ${alumnos.size}")
+                        Text("Al día: ${alumnos.count { it.estadoPago == EstadoPago.ADELANTADO }}")
+                        Text("Pendientes: ${alumnosPendientes.size}")
+                        Text("En deuda: ${alumnosConDeuda.size}")
+                    }
+                }
             }
 
+            // 5. Sesiones Recientes (ejemplo temporal)
             item {
-                if (sesionesGuardadas.size > 3) {
-                    Text(
-                        "Ver todo el historial...",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp, bottom = 16.dp)
-                            .clickable { /* Simulación de navegación a historial completo */ },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    "Últimas Sesiones:",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            items(sesionesEjemplo, key = { it.sessionId }) { sesion ->
+                SesionGuardadaCard(sesion)
             }
         }
     }
@@ -167,11 +199,11 @@ fun SesionGuardadaCard(sesion: SesionDeClase) {
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
-                    "Fecha: ${sesion.fechaCreacion.format(DateTimeFormatter.ofPattern("dd MMM, hh:mm a", Locale("es")))}",
+                    "Fecha: ${sesion.fechaCreacion}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    "Duración: ${sesion.duracionTotalMinutos} min | ${sesion.ejercicios.size} ejercicios",
+                    "Duración: ${sesion.duracionTotalMinutos} min",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
