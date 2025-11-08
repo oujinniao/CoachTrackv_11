@@ -48,6 +48,15 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // ---------------------------------------------------------
+    // 🔹 AGREGAR un nuevo alumno MANUAL (desde el formulario)
+    // ---------------------------------------------------------
+    fun agregarAlumnoManual(alumno: AlumnoEntity) {
+        viewModelScope.launch {
+            repository.addAlumno(alumno)
+        }
+    }
+
+    // ---------------------------------------------------------
     // 🔹 ELIMINAR un alumno (por decisión del profesor)
     // ---------------------------------------------------------
     fun eliminarAlumno(alumno: AlumnoEntity) {
@@ -70,7 +79,7 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
     // ---------------------------------------------------------
     fun eliminarTodos() {
         viewModelScope.launch {
-            repository.deleteAll()
+            repository.deleteAllAlumnos()
         }
     }
 }

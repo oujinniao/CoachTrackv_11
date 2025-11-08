@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import kotlinx.coroutines.flow.Flow
 import kotlin.jvm.java
-import com.example.coachtrack.AlumnoEntity
-import com.example.coachtrack.CoachTrackDatabase
 
 class AlumnoRepository(context: Context) {
 
@@ -15,12 +13,11 @@ class AlumnoRepository(context: Context) {
         "coachtrack_db"
     )
         .fallbackToDestructiveMigration()
-
         .build()
 
     private val dao = db.alumnoDao()
 
-     fun getAlumnos(): Flow<List<AlumnoEntity>> = dao.getAll()
+    fun getAlumnos(): Flow<List<AlumnoEntity>> = dao.getAll()
 
     suspend fun addAlumno(alumno: AlumnoEntity) = dao.insert(alumno)
 
@@ -28,5 +25,6 @@ class AlumnoRepository(context: Context) {
 
     suspend fun deleteAlumno(alumno: AlumnoEntity) = dao.delete(alumno)
 
-    suspend fun deleteAll() = dao.deleteAll()
+    // 👇 NUEVO: usado por CarteraViewModel.eliminarTodos()
+    suspend fun deleteAllAlumnos() = dao.deleteAll()
 }

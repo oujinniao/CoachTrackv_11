@@ -2,50 +2,50 @@ package com.example.coachtrack
 
 import android.app.Application
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun CarteraScreen(
     onVolver: () -> Unit,
-    onAbrirFichaAlumno: (Alumnos) -> Unit
+    onAbrirFichaAlumno: (AlumnoEntity) -> Unit
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as Application
-    val viewModel: CarteraViewModel = viewModel(
-        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+    val carteraViewModel: CarteraViewModel = viewModel(
+        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+            .getInstance(context.applicationContext as Application)
     )
 
-    val alumnos by viewModel.alumnos.collectAsState(initial = emptyList())
+    val alumnos by carteraViewModel.alumnos.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // Snackbar animado
-    var showSnackbar by remember { mutableStateOf(false) }
-    var snackbarMessage by remember { mutableStateOf("") }
-    var snackbarColor by remember { mutableStateOf(Color(0xFF4CAF50)) }
+    // Estados del formulario
+    var mostrarFormulario by remember { mutableStateOf(false) }
+    var editandoAlumno by remember { mutableStateOf<AlumnoEntity?>(null) }
+    var nombre by remember { mutableStateOf("") }
+    var nivel by remember { mutableStateOf("Inicial") }
+    var objetivo by remember { mutableStateOf("") }
+    var telefono by remember { mutableStateOf("") }
+    var direccion by remember { mutableStateOf("") }
+    var estadoPago by remember { mutableStateOf(EstadoPago.PENDIENTE) }
 
-    // Diálogo de confirmación
+    // Estado para confirmar eliminaciones
     var alumnoAEliminar by remember { mutableStateOf<AlumnoEntity?>(null) }
 
     Scaffold(
@@ -56,133 +56,215 @@ fun CarteraScreen(
                     IconButton(onClick = onVolver) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
+                },
+                actions = {
+                    IconButton(onClick = { carteraViewModel.eliminarTodos() }) {
+                        Icon(Icons.Default.DeleteSweep, contentDescription = "Limpiar base de datos")
+                    }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                viewModel.agregarAlumnoDemo()
-                snackbarMessage = "Alumno de ejemplo agregado ✅"
-                snackbarColor = Color(0xFF4CAF50)
-                showSnackbar = true
-                scope.launch {
-                    delay(2000)
-                    showSnackbar = false
-                }
-            }) {
+            FloatingActionButton(
+                onClick = {
+                    // Reset de formulario
+                    editandoAlumno = null
+                    nombre = ""
+                    nivel = "Inicial"
+                    objetivo = ""
+                    telefono = ""
+                    direccion = ""
+                    estadoPago = EstadoPago.PENDIENTE
+                    mostrarFormulario = !mostrarFormulario
+                },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Alumno")
             }
         }
-    ) { paddingValues ->
+    ) { padding ->
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
+                .padding(16.dp)
         ) {
-
-            if (alumnos.isEmpty()) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+            // 🔹 FORMULARIO
+            AnimatedVisibility(
+                visible = mostrarFormulario,
+                enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
                 ) {
-                    Text("No hay alumnos registrados")
-                    Text(
-                        "Agrega alumnos con el botón +",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            if (editandoAlumno != null) "Editar Alumno" else "Nuevo Alumno",
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        OutlinedTextField(
+                            value = nombre,
+                            onValueChange = { nombre = it },
+                            label = { Text("Nombre del alumno") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // 🔸 Nivel desplegable
+                        var expanded by remember { mutableStateOf(false) }
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded }
+                        ) {
+                            OutlinedTextField(
+                                value = nivel,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Nivel") },
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                listOf("Inicial", "Intermedio", "Avanzado", "Competitivo").forEach { opcion ->
+                                    DropdownMenuItem(
+                                        text = { Text(opcion) },
+                                        onClick = {
+                                            nivel = opcion
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = objetivo,
+                            onValueChange = { objetivo = it },
+                            label = { Text("Objetivo") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = telefono,
+                            onValueChange = { telefono = it },
+                            label = { Text("Teléfono") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = direccion,
+                            onValueChange = { direccion = it },
+                            label = { Text("Dirección") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedButton(
+                                onClick = { mostrarFormulario = false },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Cancelar")
+                            }
+                            Button(
+                                onClick = {
+                                    if (nombre.isNotBlank()) {
+                                        val alumno = AlumnoEntity(
+                                            id = editandoAlumno?.id ?: 0,
+                                            nombre = nombre,
+                                            nivelActual = nivel,
+                                            objetivo = objetivo,
+                                            telefono = telefono,
+                                            direccion = direccion,
+                                            estadoPago = estadoPago,
+                                            clasesPactadas = 5,
+                                            clasesCursadas = 0,
+                                            notasEntrenador = ""
+                                        )
+                                        scope.launch {
+                                            if (editandoAlumno == null)
+                                                carteraViewModel.agregarAlumnoManual(alumno)
+                                            else
+                                                carteraViewModel.actualizarAlumno(alumno)
+
+                                            mostrarFormulario = false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(if (editandoAlumno != null) "Actualizar" else "Guardar")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 🔹 LISTA DE ALUMNOS
+            if (alumnos.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay alumnos registrados.")
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(alumnos, key = { it.id }) { alumno ->
-
-                        // Estado local del alumno visible
                         var visible by remember { mutableStateOf(true) }
-
-                        // Escala animada con rebote
-                        val scale by animateFloatAsState(
-                            targetValue = if (visible) 1f else 0.6f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            label = "bounceScale"
-                        )
 
                         AnimatedVisibility(
                             visible = visible,
-                            enter = fadeIn(tween(300)),
-                            exit = fadeOut(tween(400)) + slideOutHorizontally(
-                                targetOffsetX = { it / 2 },
-                                animationSpec = tween(500, easing = LinearOutSlowInEasing)
-                            )
+                            enter = fadeIn(animationSpec = tween(200)),
+                            exit = slideOutHorizontally(
+                                targetOffsetX = { -it },
+                                animationSpec = tween(300)
+                            ) + fadeOut(animationSpec = tween(150))
                         ) {
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .scale(scale)
-                                    .clickable {
-                                        onAbrirFichaAlumno(
-                                            Alumnos(
-                                                id = alumno.id.toString(),
-                                                nombre = alumno.nombre,
-                                                nivelActual = alumno.nivelActual,
-                                                clasesPactadas = alumno.clasesPactadas,
-                                                clasesCursadas = alumno.clasesCursadas,
-                                                estadoPago = alumno.estadoPago
-                                            )
-                                        )
-                                    },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
+                                    .clickable { onAbrirFichaAlumno(alumno) },
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
                             ) {
                                 Row(
                                     modifier = Modifier
-                                        .padding(12.dp)
-                                        .fillMaxWidth(),
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(Modifier.weight(1f)) {
+                                    Column {
                                         Text(alumno.nombre, fontWeight = FontWeight.Bold)
-                                        Text(
-                                            "Nivel: ${alumno.nivelActual}",
-                                            color = Color.Gray,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            "Pago: ${alumno.estadoPago}",
-                                            color = when (alumno.estadoPago) {
-                                                EstadoPago.ADELANTADO -> Color(0xFF2E7D32)
-                                                EstadoPago.PENDIENTE -> Color(0xFFFFA000)
-                                                EstadoPago.DEUDA -> Color(0xFFC62828)
-                                            },
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Text("Nivel: ${alumno.nivelActual}")
+                                        Text("Pago: ${alumno.estadoPago}")
                                     }
 
                                     Row {
                                         IconButton(onClick = {
-                                            onAbrirFichaAlumno(
-                                                Alumnos(
-                                                    id = alumno.id.toString(),
-                                                    nombre = alumno.nombre,
-                                                    nivelActual = alumno.nivelActual,
-                                                    clasesPactadas = alumno.clasesPactadas,
-                                                    clasesCursadas = alumno.clasesCursadas,
-                                                    estadoPago = alumno.estadoPago
-                                                )
-                                            )
+                                            // Modo edición
+                                            editandoAlumno = alumno
+                                            nombre = alumno.nombre
+                                            nivel = alumno.nivelActual
+                                            objetivo = alumno.objetivo
+                                            telefono = alumno.telefono
+                                            direccion = alumno.direccion
+                                            mostrarFormulario = true
                                         }) {
-                                            Icon(Icons.Default.Edit, contentDescription = "Editar")
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = "Editar alumno",
+                                                tint = Color(0xFF1976D2)
+                                            )
                                         }
 
                                         IconButton(onClick = {
@@ -191,70 +273,40 @@ fun CarteraScreen(
                                             Icon(
                                                 Icons.Default.Delete,
                                                 contentDescription = "Eliminar alumno",
-                                                tint = Color.Red
+                                                tint = Color(0xFFD32F2F)
                                             )
                                         }
                                     }
                                 }
                             }
                         }
-
-                        // Diálogo de confirmación de eliminación
-                        if (alumnoAEliminar == alumno) {
-                            AlertDialog(
-                                onDismissRequest = { alumnoAEliminar = null },
-                                confirmButton = {
-                                    TextButton(onClick = {
-                                        scope.launch {
-                                            // 🔹 Animación de salida con rebote
-                                            visible = false
-                                            delay(450)
-                                            viewModel.eliminarAlumno(alumno)
-                                            snackbarMessage = "Alumno ${alumno.nombre} eliminado ❌"
-                                            snackbarColor = Color(0xFFE53935)
-                                            showSnackbar = true
-                                            alumnoAEliminar = null
-                                            delay(2500)
-                                            showSnackbar = false
-                                        }
-                                    }) {
-                                        Text("Eliminar", color = Color.Red)
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { alumnoAEliminar = null }) {
-                                        Text("Cancelar")
-                                    }
-                                },
-                                title = { Text("¿Eliminar alumno?") },
-                                text = { Text("Esta acción no se puede deshacer.") }
-                            )
-                        }
                     }
                 }
             }
+        }
 
-            // Snackbar animado con deslizamiento
-            AnimatedVisibility(
-                visible = showSnackbar,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 32.dp)
-            ) {
-                Surface(
-                    color = snackbarColor,
-                    shadowElevation = 10.dp,
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text(
-                        text = snackbarMessage,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                    )
+        // 🔸 Diálogo de confirmación de eliminación
+        if (alumnoAEliminar != null) {
+            AlertDialog(
+                onDismissRequest = { alumnoAEliminar = null },
+                title = { Text("Eliminar alumno") },
+                text = { Text("¿Seguro que deseas eliminar a ${alumnoAEliminar!!.nombre}?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        scope.launch {
+                            carteraViewModel.eliminarAlumno(alumnoAEliminar!!)
+                            alumnoAEliminar = null
+                        }
+                    }) {
+                        Text("Eliminar", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { alumnoAEliminar = null }) {
+                        Text("Cancelar")
+                    }
                 }
-            }
+            )
         }
     }
 }
