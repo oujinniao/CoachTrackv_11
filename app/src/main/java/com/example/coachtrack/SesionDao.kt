@@ -2,7 +2,7 @@ package com.example.coachtrack
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
-// Usamos la lista de Kotlin explícita para evitar el error de sintaxis de Java
+
 import kotlin.collections.List
 
 @Dao

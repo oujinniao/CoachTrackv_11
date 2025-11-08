@@ -12,6 +12,9 @@ data class SesionEntity(
     @ColumnInfo(name = "alumnoId")
     val alumnoId: Int,
 
+    @ColumnInfo(name = "alumnoNombre")
+    val alumnoNombre: String,   // ✅ nuevo campo: nombre del alumno
+
     @ColumnInfo(name = "fecha")
     val fecha: String,
 
@@ -19,7 +22,7 @@ data class SesionEntity(
     val duracion: Int,
 
     @ColumnInfo(name = "ejercicios")
-    val ejercicios: String, // Guardar como JSON o string separado por comas
+    val ejercicios: String, // Guardamos los ejercicios como string (ej: "Drill de Saque, Calentamiento")
 
     @ColumnInfo(name = "notas")
     val notas: String = "",

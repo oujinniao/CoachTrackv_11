@@ -8,51 +8,69 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel que maneja la lista de alumnos y operaciones
+ * como agregar, actualizar o eliminar desde la base de datos Room.
+ */
 class CarteraViewModel(application: Application) : AndroidViewModel(application) {
 
+    // Repositorio de acceso a la base de datos
     private val repository = AlumnoRepository(application)
 
-    // 🔹 Conectamos directamente al Flow de Room
-    // Cada vez que cambia la base de datos, se actualiza automáticamente.
+    // 🔹 Flujo de alumnos desde Room (se actualiza automáticamente)
     val alumnos: StateFlow<List<AlumnoEntity>> = repository
-        .getAlumnos()  // Flow<List<AlumnoEntity>>
+        .getAlumnos()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    // 🔹 Agregar un nuevo alumno
-    fun agregarAlumno(alumno: AlumnoEntity) {
+    // ---------------------------------------------------------
+    // 🔹 AGREGAR un nuevo alumno DEMO (para pruebas rápidas)
+    // ---------------------------------------------------------
+    fun agregarAlumnoDemo() {
         viewModelScope.launch {
-            try {
-                repository.addAlumno(alumno)
-                // ❌ ya no llamamos cargarAlumnos(), el Flow se actualiza solo
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            val nuevoAlumno = AlumnoEntity(
+                nombre = "Alumno Demo ${(1000..9999).random()}",
+                nivelActual = "Inicial",
+                objetivo = "Mejorar técnica de saque",
+                clasesPactadas = 5,
+                clasesCursadas = 0,
+                estadoPago = EstadoPago.PENDIENTE,
+                edad = 15,
+                telefono = "987654321",
+                direccion = "Club Tenis Providencia",
+                notasEntrenador = "Alumno creado automáticamente para pruebas."
+            )
+            repository.addAlumno(nuevoAlumno)
         }
     }
 
-    // 🔹 Actualizar alumno existente
-    fun actualizarAlumno(alumno: AlumnoEntity) {
-        viewModelScope.launch {
-            try {
-                repository.updateAlumno(alumno)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    // 🔹 Eliminar alumno
+    // ---------------------------------------------------------
+    // 🔹 ELIMINAR un alumno (por decisión del profesor)
+    // ---------------------------------------------------------
     fun eliminarAlumno(alumno: AlumnoEntity) {
         viewModelScope.launch {
-            try {
-                repository.deleteAlumno(alumno)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            repository.deleteAlumno(alumno)
+        }
+    }
+
+    // ---------------------------------------------------------
+    // 🔹 ACTUALIZAR un alumno (ej. si cambia su nivel o pago)
+    // ---------------------------------------------------------
+    fun actualizarAlumno(alumno: AlumnoEntity) {
+        viewModelScope.launch {
+            repository.updateAlumno(alumno)
+        }
+    }
+
+    // ---------------------------------------------------------
+    // 🔹 ELIMINAR TODOS (solo si quieres reiniciar la base)
+    // ---------------------------------------------------------
+    fun eliminarTodos() {
+        viewModelScope.launch {
+            repository.deleteAll()
         }
     }
 }

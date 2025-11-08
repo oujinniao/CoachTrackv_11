@@ -13,7 +13,10 @@ class AlumnoRepository(context: Context) {
         context.applicationContext,
         CoachTrackDatabase::class.java,
         "coachtrack_db"
-    ).build()
+    )
+        .fallbackToDestructiveMigration()
+
+        .build()
 
     private val dao = db.alumnoDao()
 
@@ -24,4 +27,6 @@ class AlumnoRepository(context: Context) {
     suspend fun updateAlumno(alumno: AlumnoEntity) = dao.update(alumno)
 
     suspend fun deleteAlumno(alumno: AlumnoEntity) = dao.delete(alumno)
+
+    suspend fun deleteAll() = dao.deleteAll()
 }

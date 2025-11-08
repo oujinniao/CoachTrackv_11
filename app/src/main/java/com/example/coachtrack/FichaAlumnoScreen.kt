@@ -2,16 +2,20 @@ package com.example.coachtrack
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,16 +28,19 @@ fun FichaAlumnoScreen(
     onNuevaSesionClick: (Alumnos) -> Unit,
     viewModel: FichaAlumnoViewModel = viewModel()
 ) {
-    // Al abrir la ficha, actualizamos los datos personales
+    // 🔹 Actualiza datos personales al abrir
     LaunchedEffect(alumnoInicial) {
         viewModel.actualizarDatosPersonales(alumnoInicial.datosPersonales)
     }
 
+    // 🔹 Estado observado desde el ViewModel
     val alumnoState by viewModel.alumno.observeAsState(alumnoInicial)
-    var alumno by remember { mutableStateOf(alumnoState) }
-    var selectedTab by remember { mutableStateOf(0) }
-    var notas by remember { mutableStateOf(alumno.notasEntrenador) }
-    var editandoNotas by remember { mutableStateOf(false) }
+
+    // 🔹 Mantenemos la ficha estable ante recomposición o pérdida de foco
+    var alumno by rememberSaveable { mutableStateOf(alumnoState) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    var notas by rememberSaveable { mutableStateOf(alumno.notasEntrenador) }
+    var editandoNotas by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -55,6 +62,7 @@ fun FichaAlumnoScreen(
             }
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -76,13 +84,48 @@ fun FichaAlumnoScreen(
                     Text(alumno.nivelActual, fontWeight = FontWeight.Bold, color = Color.Gray)
                     Spacer(Modifier.height(8.dp))
                     CircularProgressIndicator(
-                        progress = alumno.progreso / 100f,
+                        progress = (alumno.progreso / 100f).coerceIn(0f, 1f),
                         strokeWidth = 8.dp,
                         modifier = Modifier.size(80.dp)
                     )
                     Spacer(Modifier.height(8.dp))
                     Text("${alumno.progreso}% completado", fontSize = 18.sp)
                     Text("Clases ${alumno.clasesCursadas} / ${alumno.clasesPactadas}")
+
+                    Spacer(Modifier.height(8.dp))
+                    Text("Ajustar clases pactadas:", fontWeight = FontWeight.Bold)
+
+                    var clasesPactadas by rememberSaveable { mutableStateOf(alumno.clasesPactadas) }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(onClick = { if (clasesPactadas > 0) clasesPactadas-- }) {
+                            Icon(Icons.Default.Remove, contentDescription = "Restar")
+                        }
+                        Text(
+                            text = "$clasesPactadas",
+                            fontSize = 20.sp,
+                            modifier = Modifier.width(40.dp),
+                            textAlign = TextAlign.Center
+                        )
+                        IconButton(onClick = { clasesPactadas++ }) {
+                            Icon(Icons.Default.Add, contentDescription = "Sumar")
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = {
+                        alumno = alumno.copy(clasesPactadas = clasesPactadas)
+                        viewModel.actualizarClasesPactadas(clasesPactadas)
+                        viewModel.guardarAlumno()
+                    }) {
+                        Icon(Icons.Default.Save, contentDescription = "Guardar pactadas")
+                        Spacer(Modifier.width(4.dp))
+                        Text("Guardar Pactadas")
+                    }
+
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Estado de pago: ${alumno.estadoPago}",
@@ -120,15 +163,14 @@ fun FichaAlumnoScreen(
                         Text("Edad: ${alumno.datosPersonales.edad}")
                         Text("Altura: ${alumno.datosPersonales.altura} cm")
                         Text("Peso: ${alumno.datosPersonales.peso} kg")
-                        Text("Dirección: ${alumno.datosPersonales.direccion}")
-                        Text("Teléfono: ${alumno.datosPersonales.telefono}")
-                        Text("Email: ${alumno.datosPersonales.email}")
+                        Text("Dirección: ${alumno.datosPersonales.direccion ?: ""}")
+                        Text("Teléfono: ${alumno.datosPersonales.telefono ?: ""}")
+                        Text("Email: ${alumno.datosPersonales.email ?: ""}")
 
-                        // 🔹 Campo interactivo: Nivel actual con menú desplegable
                         Spacer(Modifier.height(12.dp))
-
                         Text("Nivel actual:", fontWeight = FontWeight.Bold)
-                        var nivelActual by remember { mutableStateOf(alumno.nivelActual) }
+
+                        var nivelActual by rememberSaveable { mutableStateOf(alumno.nivelActual) }
 
                         NivelActualSelector(
                             nivelActual = nivelActual,

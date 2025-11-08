@@ -1,28 +1,34 @@
 package com.example.coachtrack
 
 import android.app.Application
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-
+import kotlinx.coroutines.launch
+import kotlin.collections.filter
 import kotlin.jvm.java
 
-
 // -------------------- FACTORY UNIFICADO --------------------
-// Nota: Es mejor mover esta clase a un archivo separado (AppViewModelFactory.kt)
 class AppViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")
@@ -36,121 +42,268 @@ class AppViewModelFactory(private val application: Application) : ViewModelProvi
     }
 }
 
-// -------------------- ESTADOS DE NAVEGACIÓN --------------------
-enum class PlanificacionState {
-    PRINCIPAL,
-    CARTERA,
-    VIDEO
-}
-
+// -------------------- PANTALLA DE PLANIFICACIÓN --------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanificacionScreen(onVolverClick: () -> Unit) {
-    var currentState by remember { mutableStateOf(PlanificacionState.PRINCIPAL) }
-    val ejerciciosSesion = remember { mutableStateListOf<Plantilla>() }
-    var alumnoSeleccionado by remember { mutableStateOf<Alumnos?>(null) }
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
     val application = context.applicationContext as Application
+    val appFactory = remember { AppViewModelFactory(application) }  // ✅ CORREGIDO
 
-    // 🔹 Inicialización del Factory unificado
-    val appFactory = remember { AppViewModelFactory(application) }
-
-    // 🔹 ViewModel de alumnos
-    // Usamos el Factory unificado
     val carteraViewModel: CarteraViewModel = viewModel(factory = appFactory)
-
-    // 🔹 ViewModel de sesiones
-    // Usamos el Factory unificado. ¡El error de referencia no resuelta se soluciona con la importación!
     val sesionViewModel: SesionViewModel = viewModel(factory = appFactory)
 
-    // Observamos alumnos desde Room
     val alumnosRoom by carteraViewModel.alumnos.collectAsState(initial = emptyList())
 
-    // Mapeamos AlumnoEntity -> modelo Alumnos
-    // 🚨 Corrección de código incompleto (la línea que terminaba en 'val alumnos = alumno')
+    // Convertimos AlumnoEntity → modelo Alumnos
     val alumnos: List<Alumnos> = alumnosRoom.map { entity ->
-        // Necesitas definir cómo mapear aquí. Esto es un ejemplo:
         Alumnos(
             id = entity.id.toString(),
             nombre = entity.nombre,
             nivelActual = entity.nivelActual,
-            clasesPactadas = entity.clasesPactadas
-            // ... añade el resto de propiedades
+            clasesPactadas = entity.clasesPactadas,
+            clasesCursadas = entity.clasesCursadas,
+            estadoPago = entity.estadoPago
         )
     }
 
-    // -------------------- ESTRUCTURA DE LA UI --------------------
+    val plantillas = PLANTILLAS_MOCK
+    val scope = rememberCoroutineScope()
+
+    // Estados de UI
+    var alumnoSeleccionado by remember { mutableStateOf<Alumnos?>(null) }
+    var query by remember { mutableStateOf("") }
+    var plantillaSeleccionada by remember { mutableStateOf<Plantilla?>(null) }
+
+    // 🔹 Snackbar animado
+    var showSnackbar by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf("") }
+
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("CoachTrack - Planificación") },
+                title = { Text("Planificar Sesión") },
                 navigationIcon = {
                     IconButton(onClick = onVolverClick) {
-                        Icon(Icons.Filled.ArrowDropDown, contentDescription = "Volver")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            if (currentState == PlanificacionState.PRINCIPAL) {
-                FloatingActionButton(onClick = { /* Lógica para añadir sesión */ }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Añadir Sesión")
-                }
-            }
         }
-    ) { paddingValues ->
-        // Contenido principal de la pantalla
-        Column(
+    ) { padding ->
+
+        // 🔹 Si el usuario abrió el detalle de una plantilla
+        if (plantillaSeleccionada != null) {
+            PlantillaDetailScreen(
+                plantilla = plantillaSeleccionada!!,
+                onAdd = {
+                    sesionViewModel.agregarPlantilla(plantillaSeleccionada!!)
+                    plantillaSeleccionada = null
+                },
+                onVolver = { plantillaSeleccionada = null }
+            )
+            return@Scaffold
+        }
+
+        Box(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(padding)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                if (alumnoSeleccionado == null) {
+                    // 🔍 BUSCADOR DE ALUMNOS
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("Buscar alumno") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-            // Aquí iría la lógica de navegación basada en currentState
-            when (currentState) {
-                PlanificacionState.PRINCIPAL -> {
-                    // Contenido de la pantalla principal
-                    Text("Pantalla Principal de Planificación", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Text("Selecciona un alumno:", fontWeight = FontWeight.Bold)
 
-                    // Botón de ejemplo para navegar a la cartera
-                    Button(onClick = { currentState = PlanificacionState.CARTERA }) {
-                        Text("Ver Cartera de Alumnos")
+                    val alumnosFiltrados = alumnos.filter {
+                        it.nombre.contains(query, ignoreCase = true)
                     }
 
-                    // Lista de Sesiones (Ejemplo de cómo usar sesionViewModel)
-                    // val sesiones by sesionViewModel.sesiones.collectAsState(initial = emptyList())
-                    // LazyColumn(content = { items(sesiones) { sesion -> /* ... */ } })
-                }
-
-                PlanificacionState.CARTERA -> {
-                    // Contenido de la pantalla de cartera
-                    Text("Cartera de Alumnos (${alumnos.size})", style = MaterialTheme.typography.headlineSmall)
-
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(alumnos) { alumno ->
-                            // Componente visual para cada alumno (Ejemplo)
-                            Card(modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { alumnoSeleccionado = alumno }
+                    LazyColumn {
+                        items(alumnosFiltrados) { alumno ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable { alumnoSeleccionado = alumno },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
                             ) {
-                                Text(alumno.nombre, modifier = Modifier.padding(8.dp))
+                                Column(Modifier.padding(12.dp)) {
+                                    Text(alumno.nombre, style = MaterialTheme.typography.titleMedium)
+                                    Text(
+                                        "Nivel: ${alumno.nivelActual}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                     }
-                }
+                } else {
+                    // 🔹 SECCIÓN DE PLANIFICACIÓN
+                    Text(
+                        "Alumno: ${alumnoSeleccionado?.nombre}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("Selecciona plantillas:", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
 
-                PlanificacionState.VIDEO -> {
-                    // Contenido de la pantalla de video
-                    Text("Gestión de Videos", style = MaterialTheme.typography.headlineSmall)
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(plantillas) { plantilla ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Row(
+                                    Modifier
+                                        .padding(12.dp)
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(plantilla.nombre, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            plantilla.enfoque,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(onClick = { plantillaSeleccionada = plantilla }) {
+                                        Icon(Icons.Default.Add, contentDescription = "Ver detalle")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // 🔹 Recuadro con plantillas añadidas
+                    if (sesionViewModel.sesionActual.isNotEmpty()) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text(
+                                    "Plantillas añadidas (${sesionViewModel.sesionActual.size}):",
+                                    fontWeight = FontWeight.Bold
+                                )
+                                sesionViewModel.sesionActual.forEach { p ->
+                                    Text("• ${p.nombre} (${p.duracionMinutos} min)")
+                                }
+                                val total = sesionViewModel.sesionActual.sumOf { it.duracionMinutos }
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "Duración total: $total minutos",
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+
+                    // 🔹 BOTONES INFERIORES
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                alumnoSeleccionado = null
+                                sesionViewModel.limpiarSesionActual()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancelar")
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    alumnoSeleccionado?.let { alumno ->
+                                        val sesion = SesionDeClase(
+                                            sessionId = generarNuevoSessionId(sesionViewModel.sesiones.value),
+                                            userId = "demo_user",
+                                            fechaCreacion = java.time.LocalDateTime.now()
+                                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
+                                            alumnoNombre = alumno.nombre,
+                                            duracionTotalMinutos = sesionViewModel.sesionActual.sumOf { it.duracionMinutos },
+                                            ejercicios = sesionViewModel.sesionActual.toMutableList()
+                                        )
+
+                                        val sesionEntity = sesion.toEntity(
+                                            alumnoId = alumno.id.toIntOrNull() ?: 0,
+                                            alumnoNombre = alumno.nombre
+                                        )
+                                        sesionViewModel.agregarSesion(sesionEntity)
+
+                                        // ✅ Mostrar Snackbar animado
+                                        snackbarMessage = "✅ Sesión guardada para ${alumno.nombre}"
+                                        showSnackbar = true
+                                        scope.launch {
+                                            kotlinx.coroutines.delay(2500)
+                                            showSnackbar = false
+                                        }
+
+                                        sesionViewModel.limpiarSesionActual()
+                                        alumnoSeleccionado = null
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = sesionViewModel.sesionActual.isNotEmpty()
+                        ) {
+                            Text("Guardar sesión")
+                        }
+                    }
+                }
+            }
+
+            // 🟢 Snackbar animado con slide + fade
+            AnimatedVisibility(
+                visible = showSnackbar,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp)
+            ) {
+                Surface(
+                    color = Color(0xFF4CAF50),
+                    shadowElevation = 10.dp,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = snackbarMessage,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                    )
                 }
             }
         }

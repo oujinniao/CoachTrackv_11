@@ -1,6 +1,11 @@
 package com.example.coachtrack
 
 import androidx.compose.runtime.*
+import com.example.coachtrack.HistorialScreen
+import com.example.coachtrack.PlanificacionScreen
+import com.example.coachtrack.VideoAnalisisScreen
+import com.example.coachtrack.CarteraScreen
+import com.example.coachtrack.PantallaPrincipal
 
 @Composable
 fun AppNavigation() {

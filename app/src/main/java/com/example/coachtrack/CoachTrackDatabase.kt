@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [AlumnoEntity::class, SesionEntity::class],
-    version = 5,  // Incrementa la versión por los cambios
+    version = 6,  // Incrementa la versión por los cambios
     exportSchema = false
 )
 @TypeConverters(Converters::class)
