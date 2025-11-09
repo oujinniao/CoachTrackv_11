@@ -11,16 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel que maneja la lista de alumnos y operaciones
- * como agregar, actualizar o eliminar desde la base de datos Room.
- */
 class CarteraViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Repositorio de acceso a la base de datos
     private val repository = AlumnoRepository(application)
 
-    // 🔹 Flujo de alumnos desde Room (se actualiza automáticamente)
     val alumnos: StateFlow<List<AlumnoEntity>> = repository
         .getAlumnos()
         .stateIn(
@@ -29,48 +23,32 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
             initialValue = emptyList()
         )
 
-    // ---------------------------------------------------------
-    // 🔹 Estado UI para mostrar/ocultar el diálogo "Agregar Alumno"
-    // ---------------------------------------------------------
+    // --------------------------
+    // 🔹 Estados de la interfaz
+    // --------------------------
     var mostrarDialogoAgregar by mutableStateOf(false)
         private set
 
-    fun abrirDialogoAgregar() { mostrarDialogoAgregar = true }
-    fun cerrarDialogoAgregar() { mostrarDialogoAgregar = false }
+    var alumnoEnEdicion by mutableStateOf<AlumnoEntity?>(null)
+        private set
 
-    // ---------------------------------------------------------
-    // 🔹 AGREGAR un nuevo alumno DEMO (para pruebas rápidas)
-    // ---------------------------------------------------------
-    fun agregarAlumnoDemo() {
-        viewModelScope.launch {
-            val nuevoAlumno = AlumnoEntity(
-                nombre = "Alumno Demo ${(1000..9999).random()}",
-                nivelActual = "Inicial",
-                objetivo = "Mejorar técnica de saque",
-                clasesPactadas = 5,
-                clasesCursadas = 0,
-                estadoPago = EstadoPago.PENDIENTE,
-                edad = 15,
-                telefono = "987654321",
-                direccion = "Club Tenis Providencia",
-                notasEntrenador = "Alumno creado automáticamente para pruebas."
-            )
-            repository.addAlumno(nuevoAlumno)
-        }
+    fun abrirDialogoAgregar(alumno: AlumnoEntity? = null) {
+        alumnoEnEdicion = alumno
+        mostrarDialogoAgregar = true
     }
 
-    // ---------------------------------------------------------
-    // 🔹 AGREGAR/MODIFICAR/ELIMINAR
-    // ---------------------------------------------------------
-    fun agregarAlumnoManual(alumno: AlumnoEntity) {
-        viewModelScope.launch {
-            repository.addAlumno(alumno)
-        }
+    fun cerrarDialogoAgregar() {
+        alumnoEnEdicion = null
+        mostrarDialogoAgregar = false
     }
 
-    fun actualizarAlumno(alumno: AlumnoEntity) {
+    // --------------------------
+    // 🔹 CRUD
+    // --------------------------
+    fun agregarOActualizarAlumno(alumno: AlumnoEntity) {
         viewModelScope.launch {
-            repository.updateAlumno(alumno)
+            if (alumno.id != 0) repository.updateAlumno(alumno)
+            else repository.addAlumno(alumno)
         }
     }
 
@@ -80,9 +58,6 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ---------------------------------------------------------
-    // 🔹 ELIMINAR TODOS (modo desarrollador)
-    // ---------------------------------------------------------
     fun eliminarTodos() {
         viewModelScope.launch {
             repository.deleteAllAlumnos()

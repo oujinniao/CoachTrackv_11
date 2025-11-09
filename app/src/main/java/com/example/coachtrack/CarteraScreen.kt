@@ -9,10 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +37,7 @@ fun CarteraScreen(
 
     val alumnos by carteraViewModel.alumnos.collectAsState()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Estado del filtro
     var filtro by remember { mutableStateOf("Todos") }
@@ -62,16 +60,17 @@ fun CarteraScreen(
                     }
                 },
                 actions = {
-                    // Mini botón modo desarrollador (limpiar DB)
+                    // 🧹 Mini botón modo desarrollador (limpiar DB)
                     TextButton(onClick = { carteraViewModel.eliminarTodos() }) {
                         Text("🧹", color = Color.Red)
                     }
                 }
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { carteraViewModel.abrirDialogoAgregar() }, // ✅ antes era: mostrarDialogoAgregar = true
+                onClick = { carteraViewModel.abrirDialogoAgregar() },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Alumno")
@@ -85,7 +84,6 @@ fun CarteraScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-
             // =============================
             // 📊 DASHBOARD RESUMEN
             // =============================
@@ -190,7 +188,9 @@ fun CarteraScreen(
                                     )
                                 }
 
-                                IconButton(onClick = { /* editar alumno */ }) {
+                                IconButton(onClick = {
+                                    carteraViewModel.abrirDialogoAgregar(alumno)
+                                }) {
                                     Icon(Icons.Default.Edit, contentDescription = "Editar")
                                 }
 
@@ -210,14 +210,25 @@ fun CarteraScreen(
     }
 
     // =============================
-    // ➕ DIÁLOGO AGREGAR ALUMNO
+    // ➕ DIÁLOGO AGREGAR / EDITAR ALUMNO
     // =============================
-    if (carteraViewModel.mostrarDialogoAgregar) { // ✅ solo lectura (getter público)
+    if (carteraViewModel.mostrarDialogoAgregar) {
         DialogAgregarAlumno(
-            onDismiss = { carteraViewModel.cerrarDialogoAgregar() }, // ✅ antes era: = false
-            onGuardar = { nuevoAlumno ->
-                carteraViewModel.agregarAlumnoManual(nuevoAlumno)
-                carteraViewModel.cerrarDialogoAgregar() // ✅ cerrar al guardar
+            alumnoExistente = carteraViewModel.alumnoEnEdicion,
+            onDismiss = { carteraViewModel.cerrarDialogoAgregar() },
+            onGuardar = { alumno ->
+                carteraViewModel.agregarOActualizarAlumno(alumno)
+                carteraViewModel.cerrarDialogoAgregar()
+
+                // ✅ Mostrar Snackbar al guardar o actualizar
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        if (alumno.id != 0)
+                            "✅ Alumno actualizado correctamente"
+                        else
+                            "✅ Alumno agregado correctamente"
+                    )
+                }
             }
         )
     }
