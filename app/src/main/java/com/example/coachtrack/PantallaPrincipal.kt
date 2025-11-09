@@ -4,11 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun PantallaPrincipal(
@@ -17,8 +18,10 @@ fun PantallaPrincipal(
     onVideoAnalisisClick: () -> Unit,
     onCarteraClick: () -> Unit,
     userId: String,
-    //firebaseManager: FakeFirebaseManager
+    onCerrarSesion: (() -> Unit)? = null
 ) {
+    var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = { TopAppBarPrincipal() }
     ) { paddingValues ->
@@ -62,11 +65,11 @@ fun PantallaPrincipal(
 
             BotonFuncionalidad("MARKETING  PORTAFOLIO", "Graba y envía feedback visual", onVideoAnalisisClick)
 
-            // ❌ COMENTA TEMPORALMENTE EL BOTÓN DE LOGOUT HASTA QUE IMPLEMENTES EL MÉTODO
-            /*
             Spacer(modifier = Modifier.height(40.dp))
+
+            // 🔒 Botón "Cerrar sesión"
             OutlinedButton(
-                onClick = { firebaseManager.logout() },
+                onClick = { mostrarDialogoCerrarSesion = true },
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
@@ -78,7 +81,28 @@ fun PantallaPrincipal(
                 Spacer(Modifier.width(8.dp))
                 Text("Cerrar sesión", fontWeight = FontWeight.Bold)
             }
-            */
+
+            // 💬 Diálogo elegante de confirmación
+            if (mostrarDialogoCerrarSesion) {
+                AlertDialog(
+                    onDismissRequest = { mostrarDialogoCerrarSesion = false },
+                    title = { Text("Cerrar sesión") },
+                    text = { Text("¿Deseas cerrar sesión y volver al inicio?") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            mostrarDialogoCerrarSesion = false
+                            onCerrarSesion?.invoke()  // 🔹 Notifica al AppNavigation que debe volver a Inicio
+                        }) {
+                            Text("Sí, salir", color = Color.Red)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { mostrarDialogoCerrarSesion = false }) {
+                            Text("Cancelar")
+                        }
+                    }
+                )
+            }
         }
     }
 }

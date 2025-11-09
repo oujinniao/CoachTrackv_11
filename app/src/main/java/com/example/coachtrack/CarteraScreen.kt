@@ -1,26 +1,32 @@
 package com.example.coachtrack
 
 import android.app.Application
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import kotlin.collections.filter
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarteraScreen(
     onVolver: () -> Unit,
@@ -35,18 +41,16 @@ fun CarteraScreen(
     val alumnos by carteraViewModel.alumnos.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // Estados del formulario
-    var mostrarFormulario by remember { mutableStateOf(false) }
-    var editandoAlumno by remember { mutableStateOf<AlumnoEntity?>(null) }
-    var nombre by remember { mutableStateOf("") }
-    var nivel by remember { mutableStateOf("Inicial") }
-    var objetivo by remember { mutableStateOf("") }
-    var telefono by remember { mutableStateOf("") }
-    var direccion by remember { mutableStateOf("") }
-    var estadoPago by remember { mutableStateOf(EstadoPago.PENDIENTE) }
+    // Estado del filtro
+    var filtro by remember { mutableStateOf("Todos") }
 
-    // Estado para confirmar eliminaciones
-    var alumnoAEliminar by remember { mutableStateOf<AlumnoEntity?>(null) }
+    // Aplicar filtro
+    val alumnosFiltrados = when (filtro) {
+        "Al día" -> alumnos.filter { it.estadoPago == EstadoPago.ADELANTADO }
+        "Pendiente" -> alumnos.filter { it.estadoPago == EstadoPago.PENDIENTE }
+        "Deuda" -> alumnos.filter { it.estadoPago == EstadoPago.DEUDA }
+        else -> alumnos
+    }
 
     Scaffold(
         topBar = {
@@ -54,259 +58,183 @@ fun CarteraScreen(
                 title = { Text("Cartera de Alumnos") },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { carteraViewModel.eliminarTodos() }) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = "Limpiar base de datos")
+                    // Mini botón modo desarrollador (limpiar DB)
+                    TextButton(onClick = { carteraViewModel.eliminarTodos() }) {
+                        Text("🧹", color = Color.Red)
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    // Reset de formulario
-                    editandoAlumno = null
-                    nombre = ""
-                    nivel = "Inicial"
-                    objetivo = ""
-                    telefono = ""
-                    direccion = ""
-                    estadoPago = EstadoPago.PENDIENTE
-                    mostrarFormulario = !mostrarFormulario
-                },
+                onClick = { carteraViewModel.abrirDialogoAgregar() }, // ✅ antes era: mostrarDialogoAgregar = true
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Alumno")
             }
         }
-    ) { padding ->
+    ) { paddingValues ->
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
         ) {
-            // 🔹 FORMULARIO
-            AnimatedVisibility(
-                visible = mostrarFormulario,
-                enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut()
+
+            // =============================
+            // 📊 DASHBOARD RESUMEN
+            // =============================
+            val total = alumnos.size
+            val alDia = alumnos.count { it.estadoPago == EstadoPago.ADELANTADO }
+            val pendientes = alumnos.count { it.estadoPago == EstadoPago.PENDIENTE }
+            val deudas = alumnos.count { it.estadoPago == EstadoPago.DEUDA }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F3F3))
             ) {
-                Card(
-                    modifier = Modifier
+                Column(
+                    Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                        .padding(16.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            if (editandoAlumno != null) "Editar Alumno" else "Nuevo Alumno",
-                            fontWeight = FontWeight.Bold
+                    Text("📊 Resumen Financiero", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Total de alumnos: $total")
+                    Text("🟢 Al día: $alDia")
+                    Text("🟡 Pendientes: $pendientes")
+                    Text("🔴 En deuda: $deudas")
+                }
+            }
+
+            // =============================
+            // 🔘 FILTROS DE VISUALIZACIÓN
+            // =============================
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                FiltroChip("Todos", filtro) { filtro = it }
+                FiltroChip("Al día", filtro) { filtro = it }
+                FiltroChip("Pendiente", filtro) { filtro = it }
+                FiltroChip("Deuda", filtro) { filtro = it }
+            }
+
+            // =============================
+            // 🧑‍🎓 LISTA DE ALUMNOS
+            // =============================
+            if (alumnosFiltrados.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay alumnos en esta categoría")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(alumnosFiltrados, key = { it.id }) { alumno ->
+                        var eliminado by remember { mutableStateOf(false) }
+                        val scaleAnim by animateFloatAsState(
+                            targetValue = if (eliminado) 0f else 1f,
+                            animationSpec = spring(),
+                            finishedListener = {
+                                if (eliminado) scope.launch {
+                                    carteraViewModel.eliminarAlumno(alumno)
+                                }
+                            }
                         )
 
-                        OutlinedTextField(
-                            value = nombre,
-                            onValueChange = { nombre = it },
-                            label = { Text("Nombre del alumno") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        // 🔸 Nivel desplegable
-                        var expanded by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
-                        ) {
-                            OutlinedTextField(
-                                value = nivel,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Nivel") },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .scale(scaleAnim)
+                                .clickable { onAbrirFichaAlumno(alumno) },
+                            colors = CardDefaults.cardColors(
+                                containerColor = when (alumno.estadoPago) {
+                                    EstadoPago.ADELANTADO -> Color(0xFFDFF8E1)
+                                    EstadoPago.PENDIENTE -> Color(0xFFFFF8E1)
+                                    EstadoPago.DEUDA -> Color(0xFFFFEBEE)
+                                }
                             )
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
+                        ) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                listOf("Inicial", "Intermedio", "Avanzado", "Competitivo").forEach { opcion ->
-                                    DropdownMenuItem(
-                                        text = { Text(opcion) },
-                                        onClick = {
-                                            nivel = opcion
-                                            expanded = false
-                                        }
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        alumno.nombre,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        "Nivel: ${alumno.nivelActual} | ${alumno.clasesCursadas}/${alumno.clasesPactadas} clases",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        "Pago: ${alumno.estadoPago}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+
+                                IconButton(onClick = { /* editar alumno */ }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Editar")
+                                }
+
+                                IconButton(onClick = { eliminado = true }) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Eliminar",
+                                        tint = Color.Red
                                     )
                                 }
                             }
                         }
-
-                        OutlinedTextField(
-                            value = objetivo,
-                            onValueChange = { objetivo = it },
-                            label = { Text("Objetivo") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        OutlinedTextField(
-                            value = telefono,
-                            onValueChange = { telefono = it },
-                            label = { Text("Teléfono") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        OutlinedTextField(
-                            value = direccion,
-                            onValueChange = { direccion = it },
-                            label = { Text("Dirección") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            OutlinedButton(
-                                onClick = { mostrarFormulario = false },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Cancelar")
-                            }
-                            Button(
-                                onClick = {
-                                    if (nombre.isNotBlank()) {
-                                        val alumno = AlumnoEntity(
-                                            id = editandoAlumno?.id ?: 0,
-                                            nombre = nombre,
-                                            nivelActual = nivel,
-                                            objetivo = objetivo,
-                                            telefono = telefono,
-                                            direccion = direccion,
-                                            estadoPago = estadoPago,
-                                            clasesPactadas = 5,
-                                            clasesCursadas = 0,
-                                            notasEntrenador = ""
-                                        )
-                                        scope.launch {
-                                            if (editandoAlumno == null)
-                                                carteraViewModel.agregarAlumnoManual(alumno)
-                                            else
-                                                carteraViewModel.actualizarAlumno(alumno)
-
-                                            mostrarFormulario = false
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(if (editandoAlumno != null) "Actualizar" else "Guardar")
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 🔹 LISTA DE ALUMNOS
-            if (alumnos.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No hay alumnos registrados.")
-                }
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(alumnos, key = { it.id }) { alumno ->
-                        var visible by remember { mutableStateOf(true) }
-
-                        AnimatedVisibility(
-                            visible = visible,
-                            enter = fadeIn(animationSpec = tween(200)),
-                            exit = slideOutHorizontally(
-                                targetOffsetX = { -it },
-                                animationSpec = tween(300)
-                            ) + fadeOut(animationSpec = tween(150))
-                        ) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onAbrirFichaAlumno(alumno) },
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(alumno.nombre, fontWeight = FontWeight.Bold)
-                                        Text("Nivel: ${alumno.nivelActual}")
-                                        Text("Pago: ${alumno.estadoPago}")
-                                    }
-
-                                    Row {
-                                        IconButton(onClick = {
-                                            // Modo edición
-                                            editandoAlumno = alumno
-                                            nombre = alumno.nombre
-                                            nivel = alumno.nivelActual
-                                            objetivo = alumno.objetivo
-                                            telefono = alumno.telefono
-                                            direccion = alumno.direccion
-                                            mostrarFormulario = true
-                                        }) {
-                                            Icon(
-                                                Icons.Default.Edit,
-                                                contentDescription = "Editar alumno",
-                                                tint = Color(0xFF1976D2)
-                                            )
-                                        }
-
-                                        IconButton(onClick = {
-                                            alumnoAEliminar = alumno
-                                        }) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "Eliminar alumno",
-                                                tint = Color(0xFFD32F2F)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
         }
+    }
 
-        // 🔸 Diálogo de confirmación de eliminación
-        if (alumnoAEliminar != null) {
-            AlertDialog(
-                onDismissRequest = { alumnoAEliminar = null },
-                title = { Text("Eliminar alumno") },
-                text = { Text("¿Seguro que deseas eliminar a ${alumnoAEliminar!!.nombre}?") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        scope.launch {
-                            carteraViewModel.eliminarAlumno(alumnoAEliminar!!)
-                            alumnoAEliminar = null
-                        }
-                    }) {
-                        Text("Eliminar", color = Color.Red)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { alumnoAEliminar = null }) {
-                        Text("Cancelar")
-                    }
-                }
-            )
-        }
+    // =============================
+    // ➕ DIÁLOGO AGREGAR ALUMNO
+    // =============================
+    if (carteraViewModel.mostrarDialogoAgregar) { // ✅ solo lectura (getter público)
+        DialogAgregarAlumno(
+            onDismiss = { carteraViewModel.cerrarDialogoAgregar() }, // ✅ antes era: = false
+            onGuardar = { nuevoAlumno ->
+                carteraViewModel.agregarAlumnoManual(nuevoAlumno)
+                carteraViewModel.cerrarDialogoAgregar() // ✅ cerrar al guardar
+            }
+        )
+    }
+}
+
+@Composable
+fun FiltroChip(texto: String, seleccionado: String, onClick: (String) -> Unit) {
+    val isSelected = texto == seleccionado
+    Surface(
+        shape = CircleShape,
+        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
+        modifier = Modifier.clickable { onClick(texto) }
+    ) {
+        Text(
+            texto,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            color = if (isSelected) Color.White else Color.Black
+        )
     }
 }

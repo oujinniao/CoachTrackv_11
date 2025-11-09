@@ -11,27 +11,21 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
+fun DashboardScreen(
     onPlanificacionClick: () -> Unit,
     onVideoClick: () -> Unit,
-    onCarteraClick: () -> Unit // Agregar este parámetro para navegar a cartera
+    onCarteraClick: () -> Unit
 ) {
-    // ViewModel para datos reales
     val context = LocalContext.current
     val viewModel: CarteraViewModel = viewModel(
         factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
@@ -40,13 +34,13 @@ fun HomeScreen(
 
     val alumnos by viewModel.alumnos.collectAsState()
 
-    // Cálculo de deuda con datos reales
+    // Cálculo de estado de pagos
     val alumnosConDeuda = alumnos.filter { it.estadoPago == EstadoPago.DEUDA }
     val alumnosPendientes = alumnos.filter { it.estadoPago == EstadoPago.PENDIENTE }
     val totalAlertas = alumnosConDeuda.size + alumnosPendientes.size
     val colorAlerta = if (alumnosConDeuda.isNotEmpty()) Color(0xFFE53935) else Color(0xFFFFC107)
 
-    // Sesiones de ejemplo temporal (puedes reemplazar con datos reales después)
+    // Sesiones de ejemplo (por ahora)
     val sesionesEjemplo = remember {
         listOf(
             SesionDeClase(
@@ -60,8 +54,11 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("CoachTrack - Tablero de Control") }) }
+        topBar = {
+            TopAppBar(title = { Text("📊 Dashboard - CoachTrack") })
+        }
     ) { paddingValues ->
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -69,7 +66,7 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            // 1. Botón de Acción Principal
+            // 1️⃣ Botón Planificar Sesión
             item {
                 Button(
                     onClick = onPlanificacionClick,
@@ -85,15 +82,18 @@ fun HomeScreen(
                 }
             }
 
-            // 2. Alerta de Cartera (ahora navega a cartera)
+            // 2️⃣ Alerta de cartera (click -> CarteraScreen)
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(onClick = onCarteraClick) // Ahora va a cartera
+                        .clickable(onClick = onCarteraClick)
                         .padding(bottom = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (totalAlertas > 0) colorAlerta.copy(alpha = 0.1f) else MaterialTheme.colorScheme.secondaryContainer
+                        containerColor = if (totalAlertas > 0)
+                            colorAlerta.copy(alpha = 0.1f)
+                        else
+                            MaterialTheme.colorScheme.secondaryContainer
                     )
                 ) {
                     Row(
@@ -105,7 +105,10 @@ fun HomeScreen(
                         Icon(
                             Icons.Default.Warning,
                             contentDescription = "Alerta de Pago",
-                            tint = if (totalAlertas > 0) colorAlerta else MaterialTheme.colorScheme.onSecondaryContainer
+                            tint = if (totalAlertas > 0)
+                                colorAlerta
+                            else
+                                MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
@@ -128,7 +131,7 @@ fun HomeScreen(
                 }
             }
 
-            // 3. Botón de Video
+            // 3️⃣ Botón de Video
             item {
                 Button(
                     onClick = onVideoClick,
@@ -143,7 +146,7 @@ fun HomeScreen(
                 }
             }
 
-            // 4. Resumen de Alumnos
+            // 4️⃣ Resumen de alumnos
             item {
                 Text(
                     "Resumen de Alumnos:",
@@ -167,7 +170,7 @@ fun HomeScreen(
                 }
             }
 
-            // 5. Sesiones Recientes (ejemplo temporal)
+            // 5️⃣ Sesiones recientes
             item {
                 Text(
                     "Últimas Sesiones:",

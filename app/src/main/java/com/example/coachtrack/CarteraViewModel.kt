@@ -1,6 +1,9 @@
 package com.example.coachtrack
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +30,15 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
         )
 
     // ---------------------------------------------------------
+    // 🔹 Estado UI para mostrar/ocultar el diálogo "Agregar Alumno"
+    // ---------------------------------------------------------
+    var mostrarDialogoAgregar by mutableStateOf(false)
+        private set
+
+    fun abrirDialogoAgregar() { mostrarDialogoAgregar = true }
+    fun cerrarDialogoAgregar() { mostrarDialogoAgregar = false }
+
+    // ---------------------------------------------------------
     // 🔹 AGREGAR un nuevo alumno DEMO (para pruebas rápidas)
     // ---------------------------------------------------------
     fun agregarAlumnoDemo() {
@@ -48,7 +60,7 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // ---------------------------------------------------------
-    // 🔹 AGREGAR un nuevo alumno MANUAL (desde el formulario)
+    // 🔹 AGREGAR/MODIFICAR/ELIMINAR
     // ---------------------------------------------------------
     fun agregarAlumnoManual(alumno: AlumnoEntity) {
         viewModelScope.launch {
@@ -56,9 +68,12 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ---------------------------------------------------------
-    // 🔹 ELIMINAR un alumno (por decisión del profesor)
-    // ---------------------------------------------------------
+    fun actualizarAlumno(alumno: AlumnoEntity) {
+        viewModelScope.launch {
+            repository.updateAlumno(alumno)
+        }
+    }
+
     fun eliminarAlumno(alumno: AlumnoEntity) {
         viewModelScope.launch {
             repository.deleteAlumno(alumno)
@@ -66,16 +81,7 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // ---------------------------------------------------------
-    // 🔹 ACTUALIZAR un alumno (ej. si cambia su nivel o pago)
-    // ---------------------------------------------------------
-    fun actualizarAlumno(alumno: AlumnoEntity) {
-        viewModelScope.launch {
-            repository.updateAlumno(alumno)
-        }
-    }
-
-    // ---------------------------------------------------------
-    // 🔹 ELIMINAR TODOS (solo si quieres reiniciar la base)
+    // 🔹 ELIMINAR TODOS (modo desarrollador)
     // ---------------------------------------------------------
     fun eliminarTodos() {
         viewModelScope.launch {

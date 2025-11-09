@@ -2,6 +2,7 @@ package com.example.coachtrack
 
 // ✅ NUEVA SEALED CLASS SIMPLIFICADA
 sealed class AppScreen {
+    object Splash : AppScreen()
     object Principal : AppScreen()
     object Planificacion : AppScreen()
     object Historial : AppScreen()
@@ -10,4 +11,5 @@ sealed class AppScreen {
     object Video : AppScreen()
     object Camara : AppScreen()
     object Inicio : AppScreen()
+
 }
