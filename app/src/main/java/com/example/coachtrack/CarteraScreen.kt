@@ -217,35 +217,45 @@ fun CarteraScreen(
             alumnoExistente = carteraViewModel.alumnoEnEdicion,
             onDismiss = { carteraViewModel.cerrarDialogoAgregar() },
             onGuardar = { alumno ->
-                carteraViewModel.agregarOActualizarAlumno(alumno)
-                carteraViewModel.cerrarDialogoAgregar()
-
-                // ✅ Mostrar Snackbar al guardar o actualizar
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        if (alumno.id != 0)
-                            "✅ Alumno actualizado correctamente"
-                        else
-                            "✅ Alumno agregado correctamente"
-                    )
+                carteraViewModel.agregarOActualizarAlumno(alumno) { exito, actualizado ->
+                    scope.launch {
+                        when {
+                            !exito -> snackbarHostState.showSnackbar("⚠️ El alumno ya existe en tu cartera")
+                            actualizado -> snackbarHostState.showSnackbar("✅ Alumno actualizado correctamente")
+                            else -> snackbarHostState.showSnackbar("✅ Alumno agregado correctamente")
+                        }
+                    }
                 }
+                carteraViewModel.cerrarDialogoAgregar()
             }
         )
     }
 }
-
-@Composable
-fun FiltroChip(texto: String, seleccionado: String, onClick: (String) -> Unit) {
-    val isSelected = texto == seleccionado
-    Surface(
-        shape = CircleShape,
-        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
-        modifier = Modifier.clickable { onClick(texto) }
+    @Composable
+    fun FiltroChip(
+        texto: String,
+        seleccionado: String,
+        onClick: (String) -> Unit
     ) {
-        Text(
-            texto,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = if (isSelected) Color.White else Color.Black
-        )
+        val isSelected = texto == seleccionado
+
+        Surface(
+            shape = CircleShape,
+            color = if (isSelected)
+                MaterialTheme.colorScheme.primary
+            else
+                Color.LightGray,
+            modifier = Modifier
+                .clickable { onClick(texto) }
+                .padding(horizontal = 4.dp)
+        ) {
+            Text(
+                text = texto,
+                color = if (isSelected) Color.White else Color.Black,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
     }
-}
+
+

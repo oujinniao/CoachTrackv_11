@@ -43,15 +43,33 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // --------------------------
-    // 🔹 CRUD
+    // 🔹 AGREGAR / ACTUALIZAR CON VALIDACIÓN
     // --------------------------
-    fun agregarOActualizarAlumno(alumno: AlumnoEntity) {
+    fun agregarOActualizarAlumno(alumno: AlumnoEntity, onResultado: (Boolean, Boolean) -> Unit) {
+        // onResultado(éxito, actualizado)
         viewModelScope.launch {
-            if (alumno.id != 0) repository.updateAlumno(alumno)
-            else repository.addAlumno(alumno)
+            val listaActual = alumnos.value
+            val existe = listaActual.any {
+                it.nombre.equals(alumno.nombre, ignoreCase = true) && it.id != alumno.id
+            }
+
+            if (existe) {
+                onResultado(false, false) // ❌ Duplicado
+            } else {
+                if (alumno.id != 0) {
+                    repository.updateAlumno(alumno)
+                    onResultado(true, true) // ✅ Actualizado
+                } else {
+                    repository.addAlumno(alumno)
+                    onResultado(true, false) // ✅ Agregado
+                }
+            }
         }
     }
 
+    // --------------------------
+    // 🔹 ELIMINAR
+    // --------------------------
     fun eliminarAlumno(alumno: AlumnoEntity) {
         viewModelScope.launch {
             repository.deleteAlumno(alumno)
