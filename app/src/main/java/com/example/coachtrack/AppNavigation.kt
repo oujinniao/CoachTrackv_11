@@ -7,6 +7,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
 
+import com.example.coachtrack.CarteraScreen
+import com.example.coachtrack.HistorialScreen
+import com.example.coachtrack.PlanificacionScreen
+import com.example.coachtrack.VideoAnalisisScreen
+
+
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AppNavigation() {

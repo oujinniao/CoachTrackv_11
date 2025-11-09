@@ -3,14 +3,8 @@ package com.example.coachtrack
 import android.content.Context
 import androidx.room.Room
 import kotlinx.coroutines.flow.Flow
-import kotlin.collections.List
-import kotlin.jvm.java
-import com.example.coachtrack.SesionDao
 
-/**
- * Repositorio que maneja las operaciones con la base de datos de sesiones.
- * ASUME QUE COACHTRACKDATABASE EXISTE.
- */
+
 class SesionRepository(context: Context) {
 
     private val db: CoachTrackDatabase = Room.databaseBuilder(

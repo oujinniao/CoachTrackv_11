@@ -1,4 +1,3 @@
-// Alumnos.kt
 package com.example.coachtrack
 
 data class Alumnos(
