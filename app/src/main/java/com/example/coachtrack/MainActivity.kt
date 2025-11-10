@@ -3,11 +3,13 @@ package com.example.coachtrack
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.fillMaxSize
+import com.example.coachtrack.AppNavigation
+import com.example.coachtrack.ui.theme.CoachTrackTheme  // ✅ Import de tu theme personalizado
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,12 +22,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CoachTrackApp() {
-    MaterialTheme {
+    CoachTrackTheme {  // ✅ CAMBIADO: Usa tu theme personalizado en lugar de MaterialTheme
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+            color = MaterialTheme.colorScheme.background  // ✅ Referencia correcta
         ) {
-            AppNavigation()  // 👈 Este es el punto de entrada de toda la app
+            AppNavigation()  // Tu punto de entrada
         }
     }
 }

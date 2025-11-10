@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -27,8 +26,6 @@ import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import kotlin.io.path.createTempFile
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +51,7 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
     val videoUriForCamara = remember {
         FileProvider.getUriForFile(
             context,
-            context.packageName + ".provider",
+            "${context.packageName}.provider",
             videoTempFile
         )
     }
@@ -63,7 +60,10 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
     val launcherArchivo = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null) videoUri = uri
+        if (uri != null) {
+            videoUri = uri
+            scope.launch { snackbarHostState.showSnackbar("✅ Video cargado desde galería") }
+        }
     }
 
     val launcherCamara = rememberLauncherForActivityResult(
@@ -98,9 +98,23 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { mostrarDialogo = true },
+                onClick = {
+                    if (videoUri != null && comentario.isNotBlank()) {
+                        mostrarDialogo = true
+                    } else {
+                        scope.launch {
+                            if (videoUri == null) {
+                                snackbarHostState.showSnackbar("📹 Primero carga o graba un video")
+                            } else {
+                                snackbarHostState.showSnackbar("📝 Agrega un comentario para compartir")
+                            }
+                        }
+                    }
+                },
                 containerColor = Color(0xFF1E88E5)
-            ) { Icon(Icons.Default.Share, contentDescription = "Compartir") }
+            ) {
+                Icon(Icons.Default.Share, contentDescription = "Compartir")
+            }
         }
     ) { padding ->
         Column(
@@ -129,8 +143,14 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Video listo para compartir",
-                            color = Color(0xFF1565C0)
+                            text = "✅ Video listo para compartir",
+                            color = Color(0xFF1565C0),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Toca el botón flotante para compartir ↗",
+                            fontSize = 12.sp,
+                            color = Color.Gray
                         )
                     }
                 } else {
@@ -142,6 +162,11 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
                             modifier = Modifier.size(80.dp)
                         )
                         Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Selecciona o graba un video",
+                            color = Color.Gray,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = { launcherArchivo.launch("video/*") },
@@ -169,18 +194,23 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
             OutlinedTextField(
                 value = titulo,
                 onValueChange = { titulo = it },
-                label = { Text("Título del video") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = comentario,
-                onValueChange = { comentario = it },
-                label = { Text("Comentario o descripción breve") },
-                modifier = Modifier.fillMaxWidth()
+                label = { Text("Título del video (opcional)") },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Ej: Progreso en el drive...") }
             )
 
             Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = comentario,
+                onValueChange = { comentario = it },
+                label = { Text("Comentario o descripción breve *") },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Ej: Gran progreso en la técnica hoy...") }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
             Text("Plantillas de mensaje:", style = MaterialTheme.typography.labelMedium)
             DropdownMenuDemo(
                 mensajesPredeterminados,
@@ -196,7 +226,13 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
                 ) {
                     Column(Modifier.padding(12.dp)) {
-                        Text(titulo, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                        if (titulo.isNotBlank()) {
+                            Text(
+                                titulo,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1565C0)
+                            )
+                        }
                         Text(comentario, color = Color.DarkGray)
                         Spacer(Modifier.height(6.dp))
                         Text(
@@ -209,32 +245,66 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
             }
 
             Spacer(Modifier.height(16.dp))
+
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(checked = modoDemo, onCheckedChange = { modoDemo = it })
+                Switch(
+                    checked = modoDemo,
+                    onCheckedChange = {
+                        modoDemo = it
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                if (it) "🔶 Modo demostración activado"
+                                else "🔹 Modo normal"
+                            )
+                        }
+                    }
+                )
                 Spacer(Modifier.width(8.dp))
-                Text("Modo demostrativo (no publica)", color = Color.Gray)
+                Text("Modo demostración", color = Color.Gray)
             }
 
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { mostrarDialogo = true },
-                enabled = videoUri != null && comentario.isNotBlank(),
+            Spacer(Modifier.height(20.dp))
+
+            // 📊 Estado actual
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E88E5))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
             ) {
-                Icon(Icons.Default.Share, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Compartir Progreso")
+                Column(Modifier.padding(12.dp)) {
+                    Text("📋 Estado para compartir:", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text("• Video: ${if (videoUri != null) "✅ Listo" else "❌ Faltante"}")
+                    Text("• Comentario: ${if (comentario.isNotBlank()) "✅ Listo" else "❌ Faltante"}")
+                    Text("• Modo: ${if (modoDemo) "🔶 Demostración" else "🔹 Publicación real"}")
+                }
             }
         }
     }
 
     // 🔹 Diálogo de compartir redes
-    if (mostrarDialogo && !modoDemo) {
-        DialogCompartir(context, onCerrar = { mostrarDialogo = false }, scope, snackbarHostState)
-    } else if (mostrarDialogo && modoDemo) {
-        scope.launch { snackbarHostState.showSnackbar("🎾 Modo demo: no se publicó ningún contenido.") }
-        mostrarDialogo = false
+    if (mostrarDialogo) {
+        if (modoDemo) {
+            // MODO DEMOSTRACIÓN: Simula el envío
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    "🎮 MODO DEMO: Simulando envío a redes sociales...\n" +
+                            "Video: ${videoUri?.toString()?.take(20)}...\n" +
+                            "Mensaje: ${comentario.take(30)}..."
+                )
+            }
+            mostrarDialogo = false
+        } else {
+            // MODO REAL: Abre diálogo de compartir
+            DialogCompartir(
+                context = context,
+                onCerrar = { mostrarDialogo = false },
+                scope = scope,
+                snackbarHostState = snackbarHostState,
+                videoUri = videoUri,
+                titulo = titulo,
+                comentario = comentario
+            )
+        }
     }
 }
 
@@ -242,17 +312,26 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
 fun DropdownMenuDemo(mensajes: List<String>, onSeleccion: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Icon(Icons.Default.Message, contentDescription = null)
             Spacer(Modifier.width(6.dp))
             Text("Seleccionar plantilla")
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
             mensajes.forEach { msg ->
-                DropdownMenuItem(text = { Text(msg, fontSize = 13.sp) }, onClick = {
-                    onSeleccion(msg)
-                    expanded = false
-                })
+                DropdownMenuItem(
+                    text = { Text(msg, fontSize = 13.sp) },
+                    onClick = {
+                        onSeleccion(msg)
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -263,32 +342,62 @@ fun DialogCompartir(
     context: Context,
     onCerrar: () -> Unit,
     scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    videoUri: Uri?,
+    titulo: String,
+    comentario: String
 ) {
     AlertDialog(
         onDismissRequest = onCerrar,
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } },
-        title = { Text("Compartir en...") },
+        confirmButton = {
+            TextButton(onClick = onCerrar) {
+                Text("Cerrar")
+            }
+        },
+        title = { Text("Compartir Video en...") },
         text = {
             Column {
                 ShareOption("Instagram", Icons.Default.Photo) {
-                    abrirInstagram(context, "coachtrack.app")
-                    scope.launch { snackbarHostState.showSnackbar("📸 Compartido en Instagram") }
+                    val mensajeInstagram = if (titulo.isNotBlank()) {
+                        "$titulo\n\n$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
+                    } else {
+                        "$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
+                    }
+                    compartirVideoOTexto(context, videoUri, mensajeInstagram, "instagram")
+                    scope.launch { snackbarHostState.showSnackbar("📸 Compartiendo en Instagram...") }
                     onCerrar()
                 }
+
                 ShareOption("WhatsApp", Icons.Default.Send) {
-                    abrirWhatsApp(context, "+56912345678", "🎾 Mira este video de entrenamiento hecho con CoachTrack!")
-                    scope.launch { snackbarHostState.showSnackbar("💬 Enviado por WhatsApp") }
+                    val mensajeWhatsApp = if (titulo.isNotBlank()) {
+                        "$titulo\n\n$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
+                    } else {
+                        "$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
+                    }
+                    compartirVideoOTexto(context, videoUri, mensajeWhatsApp, "whatsapp")
+                    scope.launch { snackbarHostState.showSnackbar("💬 Compartiendo en WhatsApp...") }
                     onCerrar()
                 }
+
                 ShareOption("Telegram", Icons.Default.Message) {
-                    compartirTexto(context, "Comparte tu video con tus grupos en Telegram 💪")
-                    scope.launch { snackbarHostState.showSnackbar("📢 Compartido en Telegram") }
+                    val mensajeTelegram = if (titulo.isNotBlank()) {
+                        "$titulo\n\n$comentario\n\n💪 Compartido via CoachTrack"
+                    } else {
+                        "$comentario\n\n💪 Compartido via CoachTrack"
+                    }
+                    compartirVideoOTexto(context, videoUri, mensajeTelegram, "telegram")
+                    scope.launch { snackbarHostState.showSnackbar("📢 Compartiendo en Telegram...") }
                     onCerrar()
                 }
-                ShareOption("YouTube", Icons.Default.Videocam) {
-                    compartirTexto(context, "Sube tu progreso a YouTube y etiqueta a @CoachTrack 🎾")
-                    scope.launch { snackbarHostState.showSnackbar("▶️ Publicado en YouTube") }
+
+                ShareOption("Otra App", Icons.Default.Share) {
+                    val mensajeGeneral = if (titulo.isNotBlank()) {
+                        "$titulo\n\n$comentario\n\n🎾 Compartido via CoachTrack"
+                    } else {
+                        "$comentario\n\n🎾 Compartido via CoachTrack"
+                    }
+                    compartirVideoOTexto(context, videoUri, mensajeGeneral, "general")
+                    scope.launch { snackbarHostState.showSnackbar("📤 Eligiendo app para compartir...") }
                     onCerrar()
                 }
             }
@@ -299,7 +408,10 @@ fun DialogCompartir(
 @Composable
 fun ShareOption(nombre: String, icon: ImageVector, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -308,8 +420,39 @@ fun ShareOption(nombre: String, icon: ImageVector, onClick: () -> Unit) {
     }
 }
 
+// ✅ FUNCIÓN PRINCIPAL MEJORADA - Comparte VIDEO + TEXTO
+fun compartirVideoOTexto(context: Context, videoUri: Uri?, mensaje: String, plataforma: String = "general") {
+    try {
+        if (videoUri != null) {
+            // Intentar compartir VIDEO + TEXTO
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "video/*"
+                putExtra(Intent.EXTRA_STREAM, videoUri)
+                putExtra(Intent.EXTRA_TEXT, mensaje)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                // Especificar app si es necesario
+                when (plataforma) {
+                    "whatsapp" -> setPackage("com.whatsapp")
+                    "instagram" -> setPackage("com.instagram.android")
+                    "telegram" -> setPackage("org.telegram.messenger")
+                    // Para "general" no se establece package
+                }
+            }
+            context.startActivity(intent)
+        } else {
+            // Solo texto si no hay video
+            compartirTexto(context, mensaje)
+        }
+    } catch (e: Exception) {
+        // Fallback a solo texto
+        compartirTexto(context, "$mensaje\n\n❌ No se pudo adjuntar el video")
+    }
+}
+
+// ✅ FUNCIÓN PARA SOLO TEXTO (como fallback)
 fun compartirTexto(context: Context, mensaje: String) {
-    val sendIntent = Intent().apply {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
         action = Intent.ACTION_SEND
         putExtra(Intent.EXTRA_TEXT, mensaje)
         type = "text/plain"
@@ -318,16 +461,21 @@ fun compartirTexto(context: Context, mensaje: String) {
     context.startActivity(shareIntent)
 }
 
+// ✅ FUNCIÓN PARA INSTAGRAM (mejorada)
 fun abrirInstagram(context: Context, usuario: String? = null) {
-    val uri = if (usuario != null) Uri.parse("http://instagram.com/_u/$usuario")
-    else Uri.parse("http://instagram.com/")
-    val intent = Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.instagram.android") }
-    try { context.startActivity(intent) }
-    catch (e: Exception) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://instagram.com"))) }
-}
+    val uri = if (usuario != null)
+        Uri.parse("http://instagram.com/_u/$usuario")
+    else
+        Uri.parse("http://instagram.com/")
 
-fun abrirWhatsApp(context: Context, telefono: String, mensaje: String) {
-    val url = "https://api.whatsapp.com/send?phone=$telefono&text=${Uri.encode(mensaje)}"
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-    context.startActivity(intent)
+    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+        setPackage("com.instagram.android")
+    }
+
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        // Fallback: abrir Instagram en navegador
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://instagram.com")))
+    }
 }
