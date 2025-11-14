@@ -29,9 +29,9 @@ fun SplashScreen(
 
     LaunchedEffect(Unit) {
         showLogo = true
-        delay(3200)
+        delay(2200)
         showText = true
-        delay(3000)
+        delay(2000)
         onSplashFinished()
     }
 

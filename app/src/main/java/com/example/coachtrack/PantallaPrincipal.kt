@@ -127,3 +127,4 @@ fun BotonFuncionalidad(texto: String, descripcion: String, onClick: () -> Unit) 
         }
     }
 }
+//esta pantalla va a cambiar, ahora el boton Cartera Alumnos se va a llamar solo CARTERAS
