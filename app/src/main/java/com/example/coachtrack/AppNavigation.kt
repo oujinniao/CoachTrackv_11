@@ -7,20 +7,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
 
-import com.example.coachtrack.CarteraScreen
-import com.example.coachtrack.HistorialScreen
-import com.example.coachtrack.PlanificacionScreen
-import com.example.coachtrack.VideoAnalisisScreen
-
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AppNavigation() {
 
-    // 🌀 Empezamos desde el Splash animado
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
 
-    // 🎬 Animación entre pantallas
     AnimatedContent(
         targetState = currentScreen,
         transitionSpec = {
@@ -32,47 +25,50 @@ fun AppNavigation() {
 
         when (screen) {
 
-            // 🌊 SplashScreen animado
-            AppScreen.Splash -> SplashScreen(
+            AppScreen.Splash -> CoachTrackSplashScreen(
                 onSplashFinished = { currentScreen = AppScreen.Principal }
             )
 
-            // 🏠 Pantalla principal con botones
             AppScreen.Principal -> PantallaPrincipal(
                 onPlanificarClick = { currentScreen = AppScreen.Planificacion },
-                onHistorialClick = { currentScreen = AppScreen.Historial },
+                onGestionClick = { currentScreen = AppScreen.Gestion },
                 onVideoAnalisisClick = { currentScreen = AppScreen.VideoAnalisis },
-                onCarteraClick = { currentScreen = AppScreen.Cartera },
                 userId = "demo_user",
-                onCerrarSesion = {
-                    // 🔙 Al cerrar sesión, vuelve al Splash animado
-                    currentScreen = AppScreen.Splash
-                }
+                onCerrarSesion = { currentScreen = AppScreen.Splash }
             )
 
-            // 📋 PLANIFICACIÓN
+            AppScreen.Gestion -> GestionMenuScreen(
+                onVolverClick = { currentScreen = AppScreen.Principal },
+                onGestionAlumnosClick = { currentScreen = AppScreen.Cartera },
+                onHistorialAlumnosClick = { currentScreen = AppScreen.Historial },
+                // ✅ NAVEGACIÓN A GESTIÓN DE PROFESORES
+                onGestionProfesoresClick = { currentScreen = AppScreen.GestionProfesores },
+                onPagosClick = { /* futuro */ }
+            )
+
+            // ✅ NUEVO CASO DE NAVEGACIÓN AÑADIDO
+            AppScreen.GestionProfesores -> GestionProfesoresScreen(
+                onVolverClick = { currentScreen = AppScreen.Gestion } // Vuelve al menú de Gestión
+            )
+
             AppScreen.Planificacion -> PlanificacionScreen(
                 onVolverClick = { currentScreen = AppScreen.Principal }
             )
 
-            // 🧾 HISTORIAL DE SESIONES
             AppScreen.Historial -> HistorialScreen(
                 onVolverClick = { currentScreen = AppScreen.Principal }
             )
 
-            // 🎥 ANÁLISIS EN VIDEO
             AppScreen.VideoAnalisis -> VideoAnalisisScreen(
                 onVolverClick = { currentScreen = AppScreen.Principal }
             )
 
-            // 💰 CARTERA DE ALUMNOS (con su Dashboard interno)
             AppScreen.Cartera -> CarteraScreen(
-                onVolver = { currentScreen = AppScreen.Principal },
-                onAbrirFichaAlumno = { /* temporal */ }
+                onVolver = { currentScreen = AppScreen.Gestion },
+                onAbrirFichaAlumno = { /* futuro */ }
             )
 
-            // 🚫 fallback
-            else -> SplashScreen(
+            else -> CoachTrackSplashScreen(
                 onSplashFinished = { currentScreen = AppScreen.Principal }
             )
         }

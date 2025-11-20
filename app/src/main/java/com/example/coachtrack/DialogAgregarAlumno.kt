@@ -3,6 +3,8 @@ package com.example.coachtrack
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -28,74 +30,121 @@ fun DialogAgregarAlumno(
     var objetivo by remember { mutableStateOf(TextFieldValue(alumnoExistente?.objetivo ?: "")) }
     var telefono by remember { mutableStateOf(TextFieldValue(alumnoExistente?.telefono ?: "")) }
     var direccion by remember { mutableStateOf(TextFieldValue(alumnoExistente?.direccion ?: "")) }
-    var clasesPactadas by remember { mutableStateOf(alumnoExistente?.clasesPactadas ?: 4) }
+    var clasesPactadas by remember { mutableStateOf(alumnoExistente?.clasesPactadas ?: 1) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = {},
+
+        title = {
+            Text(
+                text = if (alumnoExistente == null) "Nuevo Alumno" else "Editar Alumno",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+
+        // BOTONES DE ACCIÓN (fijos en el pie del diálogo)
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (nombre.text.isNotBlank()) {
+                        val alumnoFinal = if (alumnoExistente != null) {
+                            alumnoExistente.copy(
+                                nombre = nombre.text,
+                                nivelActual = nivel,
+                                objetivo = objetivo.text,
+                                telefono = telefono.text,
+                                direccion = direccion.text,
+                                clasesPactadas = clasesPactadas
+                            )
+                        } else {
+                            AlumnoEntity(
+                                id = 0,
+                                nombre = nombre.text,
+                                nivelActual = nivel,
+                                objetivo = objetivo.text,
+                                clasesPactadas = clasesPactadas,
+                                clasesCursadas = 0,
+                                estadoPago = EstadoPago.PENDIENTE,
+                                edad = 0,
+                                telefono = telefono.text,
+                                direccion = direccion.text,
+                                notasEntrenador = ""
+                            )
+                        }
+                        onGuardar(alumnoFinal)
+                    }
+                }
+            ) {
+                Text(if (alumnoExistente == null) "Guardar" else "Actualizar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        },
+
+        // CONTENIDO DEL FORMULARIO (Desplazable)
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 0.dp),
+                // 🆕 Espaciado vertical reducido a 6.dp
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(
-                    text = if (alumnoExistente == null) "Nuevo Alumno" else "Editar Alumno",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
                 // 🧍 Nombre
                 OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre") },
-                    modifier = Modifier.fillMaxWidth()
+                    value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") },
+                    // 🆕 Altura máxima reducida
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
-
-                // 🎾 Nivel actual con color dinámico
-                NivelDropdownSelector(
-                    nivelActual = nivel,
-                    onNivelSeleccionado = { nivel = it }
-                )
-
+                // 🎾 Nivel actual
+                NivelDropdownSelector(nivelActual = nivel, onNivelSeleccionado = { nivel = it })
                 // 🎯 Objetivo
                 OutlinedTextField(
-                    value = objetivo,
-                    onValueChange = { objetivo = it },
-                    label = { Text("Objetivo de entrenamiento") },
-                    modifier = Modifier.fillMaxWidth()
+                    value = objetivo, onValueChange = { objetivo = it }, label = { Text("Objetivo de entrenamiento") },
+                    // 🆕 Altura máxima reducida
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
-
                 // ☎️ Teléfono
                 OutlinedTextField(
-                    value = telefono,
-                    onValueChange = { telefono = it },
-                    label = { Text("Teléfono") },
-                    modifier = Modifier.fillMaxWidth()
+                    value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") },
+                    // 🆕 Altura máxima reducida
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
-
                 // 📍 Dirección
                 OutlinedTextField(
-                    value = direccion,
-                    onValueChange = { direccion = it },
-                    label = { Text("Dirección") },
-                    modifier = Modifier.fillMaxWidth()
+                    value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección o email") },
+                    // 🆕 Altura máxima reducida
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
 
-                // 🧮 Clases pactadas
-                Spacer(Modifier.height(12.dp))
+
+                Spacer(Modifier.height(4.dp))
                 Text("Clases pactadas", style = MaterialTheme.typography.titleSmall)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp)
+                        .padding(vertical = 0.dp)
                 ) {
-                    IconButton(onClick = { if (clasesPactadas > 1) clasesPactadas-- }) {
-                        Icon(Icons.Default.Remove, contentDescription = "Restar clase")
+                    // ⭐ Solución Final: Box con Clickable (Restar)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp) // Área de toque más pequeña
+                            .clickable { if (clasesPactadas > 1) clasesPactadas-- }
+                            .align(Alignment.CenterVertically),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Remove,
+                            contentDescription = "Restar clase",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp) // Tamaño del icono
+                        )
                     }
+
                     Text(
                         text = "$clasesPactadas",
                         style = MaterialTheme.typography.titleLarge,
@@ -105,52 +154,21 @@ fun DialogAgregarAlumno(
                             .background(Color(0xFFF5F5F5))
                             .padding(vertical = 4.dp)
                     )
-                    IconButton(onClick = { clasesPactadas++ }) {
-                        Icon(Icons.Default.Add, contentDescription = "Agregar clase")
-                    }
-                }
 
-                Spacer(Modifier.height(8.dp))
-
-                // 🔘 Botones inferiores
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) { Text("Cancelar") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            if (nombre.text.isNotBlank()) {
-                                val alumnoFinal = if (alumnoExistente != null) {
-                                    alumnoExistente.copy(
-                                        nombre = nombre.text,
-                                        nivelActual = nivel,
-                                        objetivo = objetivo.text,
-                                        telefono = telefono.text,
-                                        direccion = direccion.text,
-                                        clasesPactadas = clasesPactadas
-                                    )
-                                } else {
-                                    AlumnoEntity(
-                                        id = 0,
-                                        nombre = nombre.text,
-                                        nivelActual = nivel,
-                                        objetivo = objetivo.text,
-                                        clasesPactadas = clasesPactadas,
-                                        clasesCursadas = 0,
-                                        estadoPago = EstadoPago.PENDIENTE,
-                                        edad = 0,
-                                        telefono = telefono.text,
-                                        direccion = direccion.text,
-                                        notasEntrenador = ""
-                                    )
-                                }
-                                onGuardar(alumnoFinal)
-                            }
-                        }
+                    // ⭐ Solución Final: Box con Clickable (Sumar)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp) // Área de toque más pequeña
+                            .clickable { clasesPactadas++ }
+                            .align(Alignment.CenterVertically),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(if (alumnoExistente == null) "Guardar" else "Actualizar")
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Agregar clase",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp) // Tamaño del icono
+                        )
                     }
                 }
             }
@@ -158,6 +176,7 @@ fun DialogAgregarAlumno(
     )
 }
 
+// Bloque NivelDropdownSelector también optimizado
 @Composable
 private fun NivelDropdownSelector(
     nivelActual: String,
@@ -166,7 +185,6 @@ private fun NivelDropdownSelector(
     var expanded by remember { mutableStateOf(false) }
     val niveles = listOf("Inicial", "Básico", "Intermedio", "Avanzado", "Profesional")
 
-    // 🎨 Color según el nivel actual
     val colorNivel = when (nivelActual) {
         "Inicial" -> Color.Gray
         "Básico" -> Color(0xFF64B5F6)
@@ -183,16 +201,17 @@ private fun NivelDropdownSelector(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = true }
+        modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
             value = nivelActual,
             onValueChange = {},
             readOnly = true,
-            enabled = false, // 👈 Esto es importante
-            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 60.dp) // 🆕 Altura máxima reducida aquí también
+                .clickable { expanded = true },
             textStyle = LocalTextStyle.current.copy(color = colorNivel),
             colors = OutlinedTextFieldDefaults.colors(
                 disabledBorderColor = colorNivel.copy(alpha = 0.6f),

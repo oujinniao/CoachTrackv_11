@@ -10,21 +10,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import com.example.coachtrack.BotonFuncionalidad
+import com.example.coachtrack.TopAppBarPrincipal
 
 @Composable
 fun PantallaPrincipal(
     onPlanificarClick: () -> Unit,
-    onHistorialClick: () -> Unit,
+    onGestionClick: () -> Unit,
     onVideoAnalisisClick: () -> Unit,
-    onCarteraClick: () -> Unit,
     userId: String,
     onCerrarSesion: (() -> Unit)? = null
 ) {
+
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopAppBarPrincipal() }
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -33,7 +36,9 @@ fun PantallaPrincipal(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Tarjeta con datos del entrenador
+            //------------------------------------
+            // CARD DATOS ENTRENADOR
+            //------------------------------------
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -53,21 +58,42 @@ fun PantallaPrincipal(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Botones principales
-            BotonFuncionalidad("PLANIFICAR SESIÓN", "Crea tu clase en 2 clics", onPlanificarClick)
+            //------------------------------------
+            // BOTÓN PLANIFICAR SESIÓN
+            //------------------------------------
+            BotonFuncionalidad(
+                texto = "PLANIFICAR SESIÓN",
+                descripcion = "Crea tu clase en 2 clics",
+                onClick = onPlanificarClick
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            BotonFuncionalidad("CARTERA DE ALUMNOS", "Gestiona pagos y estado de alumnos", onCarteraClick)
+            //------------------------------------
+            // BOTÓN GESTIÓN (NUEVO)
+            //------------------------------------
+            BotonFuncionalidad(
+                texto = "GESTIÓN",
+                descripcion = "Alumnos, historial, profesores, pagos",
+                onClick = onGestionClick
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            BotonFuncionalidad("HISTORIAL DE ALUMNOS", "Consulta informes de progreso individual", onHistorialClick)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            BotonFuncionalidad("MARKETING  PORTAFOLIO", "Graba y envía feedback visual", onVideoAnalisisClick)
+            //------------------------------------
+            // BOTÓN MARKETING
+            //------------------------------------
+            BotonFuncionalidad(
+                texto = "MARKETING / PORTAFOLIO",
+                descripcion = "Graba y envía feedback visual",
+                onClick = onVideoAnalisisClick
+            )
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // 🔒 Botón "Cerrar sesión"
+            //------------------------------------
+            // BOTÓN CERRAR SESIÓN
+            //------------------------------------
             OutlinedButton(
                 onClick = { mostrarDialogoCerrarSesion = true },
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -82,7 +108,9 @@ fun PantallaPrincipal(
                 Text("Cerrar sesión", fontWeight = FontWeight.Bold)
             }
 
-            // 💬 Diálogo elegante de confirmación
+            //------------------------------------
+            // DIÁLOGO CONFIRMACIÓN
+            //------------------------------------
             if (mostrarDialogoCerrarSesion) {
                 AlertDialog(
                     onDismissRequest = { mostrarDialogoCerrarSesion = false },
@@ -91,7 +119,7 @@ fun PantallaPrincipal(
                     confirmButton = {
                         TextButton(onClick = {
                             mostrarDialogoCerrarSesion = false
-                            onCerrarSesion?.invoke()  // 🔹 Notifica al AppNavigation que debe volver a Inicio
+                            onCerrarSesion?.invoke()
                         }) {
                             Text("Sí, salir", color = Color.Red)
                         }
@@ -119,7 +147,10 @@ fun BotonFuncionalidad(texto: String, descripcion: String, onClick: () -> Unit) 
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
+            .height(80.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary)
     ) {
         Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
             Text(texto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -127,4 +158,3 @@ fun BotonFuncionalidad(texto: String, descripcion: String, onClick: () -> Unit) 
         }
     }
 }
-//esta pantalla va a cambiar, ahora el boton Cartera Alumnos se va a llamar solo CARTERAS

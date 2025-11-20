@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(
+fun CoachTrackSplashScreen(
     onSplashFinished: () -> Unit
 ) {
     var showLogo by remember { mutableStateOf(false) }
@@ -29,9 +29,9 @@ fun SplashScreen(
 
     LaunchedEffect(Unit) {
         showLogo = true
-        delay(2200)
+        delay(1200)
         showText = true
-        delay(2000)
+        delay(1000)
         onSplashFinished()
     }
 
@@ -48,7 +48,7 @@ fun SplashScreen(
         ) {
             AnimatedVisibility(
                 visible = showLogo,
-                enter = fadeIn(animationSpec = tween(2000)),
+                enter = fadeIn(animationSpec = tween(1000)),
                 exit = fadeOut(animationSpec = tween(1000))
             ) {
                 Image(

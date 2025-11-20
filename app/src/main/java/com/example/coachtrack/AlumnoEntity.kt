@@ -18,4 +18,5 @@ data class AlumnoEntity(
     val edad: Int = 0,
     val telefono: String = "",
     val direccion: String = "",
-    val notasEntrenador: String = "")
+    val notasEntrenador: String = "",
+    val profesorInstructor: Int?=null)

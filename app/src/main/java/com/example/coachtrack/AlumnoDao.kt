@@ -7,7 +7,10 @@ import kotlinx.coroutines.flow.Flow
 interface AlumnoDao {
 
     @Query("SELECT * FROM alumnos ORDER BY nombre ASC")
-     fun getAll(): Flow<List<AlumnoEntity>>
+    fun getAll(): Flow<List<AlumnoEntity>>
+
+    @Query("SELECT * FROM alumnos WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Int): AlumnoEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(alumno: AlumnoEntity)
