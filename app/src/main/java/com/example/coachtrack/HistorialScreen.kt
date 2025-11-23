@@ -1,6 +1,7 @@
 package com.example.coachtrack
 
 import android.app.Application
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +21,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorialScreen(onVolverClick: () -> Unit) {
+
+    //------------BACKHANDLER PARA ESTA PANTALLA--------------------
+    BackHandler {
+        onVolverClick()
+    }
+
     val context = LocalContext.current
     val sesionViewModel: SesionViewModel = viewModel(
         factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory

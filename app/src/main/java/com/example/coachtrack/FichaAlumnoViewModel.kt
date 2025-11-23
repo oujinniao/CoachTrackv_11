@@ -38,16 +38,16 @@ class FichaAlumnoViewModel(application: Application) : AndroidViewModel(applicat
             _alumno.value?.let { alumno ->
                 val entity = AlumnoEntity(
                     id = alumno.id.toIntOrNull() ?: 0,
-                    nombre = alumno.nombre ?: "",
-                    nivelActual = alumno.nivelActual ?: "",
+                    nombre = alumno.nombre,
+                    nivelActual = alumno.nivelActual,
                     objetivo = alumno.objetivo ?: "",
                     clasesPactadas = alumno.clasesPactadas,
                     clasesCursadas = alumno.clasesCursadas,
-                    estadoPago = alumno.estadoPago, // ✅ Enum directo
+                    estadoPago = alumno.estadoPago.name,
                     edad = alumno.datosPersonales.edad,
-                    telefono = alumno.datosPersonales.telefono ?: "",
-                    direccion = alumno.datosPersonales.direccion ?: "",
-                    notasEntrenador = alumno.notasEntrenador ?: ""
+                    telefono = alumno.datosPersonales.telefono,
+                    direccion = alumno.datosPersonales.direccion,
+                    notasEntrenador = alumno.notasEntrenador
                 )
                 repository.updateAlumno(entity)
                 println("✅ Alumno actualizado: ${alumno.nombre} → Pactadas=${alumno.clasesPactadas}")

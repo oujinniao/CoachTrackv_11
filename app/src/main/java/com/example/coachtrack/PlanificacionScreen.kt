@@ -1,6 +1,8 @@
 package com.example.coachtrack
 
+import androidx.activity.compose.BackHandler
 import android.app.Application
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,8 +37,10 @@ class AppViewModelFactory(private val application: Application) : ViewModelProvi
         return when {
             modelClass.isAssignableFrom(CarteraViewModel::class.java) ->
                 CarteraViewModel(application) as T
+
             modelClass.isAssignableFrom(SesionViewModel::class.java) ->
                 SesionViewModel(application) as T
+
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
@@ -47,13 +51,19 @@ class AppViewModelFactory(private val application: Application) : ViewModelProvi
 @Composable
 fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
+    //***********BACKHANDLER PARA ESTA PANTALLA*********************************
+    BackHandler {
+        onVolverClick()
+    }
+
+
     val context = LocalContext.current
-    val application = context.applicationContext as Application
-    val appFactory = remember { AppViewModelFactory(application) }  // ✅ CORREGIDO
+    val appFactory = remember { AppViewModelFactory(context.applicationContext as Application) }
 
     val carteraViewModel: CarteraViewModel = viewModel(factory = appFactory)
     val sesionViewModel: SesionViewModel = viewModel(factory = appFactory)
 
+    // Obtenemos alumnos reales desde Room
     val alumnosRoom by carteraViewModel.alumnos.collectAsState(initial = emptyList())
 
     // Convertimos AlumnoEntity → modelo Alumnos
@@ -62,21 +72,25 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
             id = entity.id.toString(),
             nombre = entity.nombre,
             nivelActual = entity.nivelActual,
+            objetivo = entity.objetivo,
             clasesPactadas = entity.clasesPactadas,
             clasesCursadas = entity.clasesCursadas,
-            estadoPago = entity.estadoPago
+            estadoPago = EstadoPago.valueOf(entity.estadoPago),     // ✅ CORREGIDO
+            datosPersonales = DatosPersonales(
+                edad = entity.edad,
+                telefono = entity.telefono,
+                direccion = entity.direccion
+            )
         )
     }
 
     val plantillas = PLANTILLAS_MOCK
     val scope = rememberCoroutineScope()
 
-    // Estados de UI
     var alumnoSeleccionado by remember { mutableStateOf<Alumnos?>(null) }
     var query by remember { mutableStateOf("") }
     var plantillaSeleccionada by remember { mutableStateOf<Plantilla?>(null) }
 
-    // 🔹 Snackbar animado
     var showSnackbar by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf("") }
 
@@ -93,7 +107,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
         }
     ) { padding ->
 
-        // 🔹 Si el usuario abrió el detalle de una plantilla
+        // ----------- DETALLE DE PLANTILLA ---------
         if (plantillaSeleccionada != null) {
             PlantillaDetailScreen(
                 plantilla = plantillaSeleccionada!!,
@@ -111,13 +125,18 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
+
+                // -----------------------------------
+                //        SELECCIÓN DE ALUMNO
+                // -----------------------------------
                 if (alumnoSeleccionado == null) {
-                    // 🔍 BUSCADOR DE ALUMNOS
+
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
@@ -153,14 +172,20 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                             }
                         }
                     }
+
                 } else {
-                    // 🔹 SECCIÓN DE PLANIFICACIÓN
+
+                    // -----------------------------------
+                    //       PLANIFICACIÓN DE SESIÓN
+                    // -----------------------------------
                     Text(
                         "Alumno: ${alumnoSeleccionado?.nombre}",
                         style = MaterialTheme.typography.titleMedium
                     )
+
                     Spacer(Modifier.height(8.dp))
                     Text("Selecciona plantillas:", fontWeight = FontWeight.Bold)
+
                     Spacer(Modifier.height(8.dp))
 
                     LazyColumn(Modifier.weight(1f)) {
@@ -198,7 +223,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
                     Spacer(Modifier.height(8.dp))
 
-                    // 🔹 Recuadro con plantillas añadidas
+                    // Plantillas añadidas
                     if (sesionViewModel.sesionActual.isNotEmpty()) {
                         Card(
                             modifier = Modifier
@@ -226,7 +251,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                         }
                     }
 
-                    // 🔹 BOTONES INFERIORES
+                    // -------- Botones inferiores ----------
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -247,9 +272,9 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                             onClick = {
                                 scope.launch {
                                     alumnoSeleccionado?.let { alumno ->
+
                                         val sesion = SesionDeClase(
                                             sessionId = generarNuevoSessionId(sesionViewModel.sesiones.value),
-                                            userId = "demo_user",
                                             fechaCreacion = java.time.LocalDateTime.now()
                                                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                                             alumnoNombre = alumno.nombre,
@@ -257,13 +282,13 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                                             ejercicios = sesionViewModel.sesionActual.toMutableList()
                                         )
 
-                                        val sesionEntity = sesion.toEntity(
-                                            alumnoId = alumno.id.toIntOrNull() ?: 0,
+                                        val entidad = sesion.toEntity(
+                                            alumnoId = alumno.id.toInt(),
                                             alumnoNombre = alumno.nombre
                                         )
-                                        sesionViewModel.agregarSesion(sesionEntity)
 
-                                        // ✅ Mostrar Snackbar animado
+                                        sesionViewModel.agregarSesion(entidad)
+
                                         snackbarMessage = "✅ Sesión guardada para ${alumno.nombre}"
                                         showSnackbar = true
                                         scope.launch {
@@ -285,7 +310,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                 }
             }
 
-            // 🟢 Snackbar animado con slide + fade
+            // ---------- Snackbar animado ------------
             AnimatedVisibility(
                 visible = showSnackbar,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),

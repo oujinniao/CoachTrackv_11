@@ -1,24 +1,23 @@
 package com.example.coachtrack
 
+import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.collections.filter
-import kotlin.collections.find
 
 class ProfesorViewModel(application: Application) : AndroidViewModel(application) {
 
     private val profesorRepository = ProfesorRepository(application)
     private val alumnoRepository = AlumnoRepository(application)
 
+    // --- FLOWS ---
     val profesores: StateFlow<List<ProfesorEntity>> = profesorRepository
         .getProfesores()
         .stateIn(
@@ -35,7 +34,29 @@ class ProfesorViewModel(application: Application) : AndroidViewModel(application
             initialValue = emptyList()
         )
 
-    // UI state: exponemos MutableState para que Compose pueda observarlos desde la UI.
+    // NUEVO: Flow para alumnos disponibles (sin profesor asignado)
+    val alumnosDisponibles: StateFlow<List<AlumnoEntity>> = alumnos
+        .map { listaAlumnos ->
+            listaAlumnos.filter { it.profesorInstructor == null }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // NUEVO: Flow para obtener alumno asignado a un profesor específico
+    fun getAlumnoAsignado(profesorId: Int): StateFlow<AlumnoEntity?> = alumnos
+        .map { listaAlumnos ->
+            listaAlumnos.find { it.profesorInstructor == profesorId }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    // --- UI STATE PARA LOS DIALOGOS ---
     val mostrarDialogoAgregar = mutableStateOf(false)
     val profesorEnEdicion = mutableStateOf<ProfesorEntity?>(null)
 
@@ -49,43 +70,50 @@ class ProfesorViewModel(application: Application) : AndroidViewModel(application
         mostrarDialogoAgregar.value = false
     }
 
-    // DB operations (existentes)
+    // --- OPERACIONES CRUD SIMPLES ---
     fun agregarOActualizarProfesor(profesor: ProfesorEntity) {
         viewModelScope.launch {
             if (profesor.id != 0) {
                 profesorRepository.updateProfesor(profesor)
+                Log.d("ProfesorVM", "Profesor actualizado id=${profesor.id}")
             } else {
-                profesorRepository.addProfesor(profesor)
+                val insertedId = profesorRepository.addProfesor(profesor)
+                Log.d("ProfesorVM", "Profesor insertado id=$insertedId")
             }
         }
     }
 
     /**
-     * Inserta o actualiza profesor y, si se pasa alumnoId, asigna al alumno a ese profesor.
+     * Inserta o actualiza un profesor y asigna o desasigna el alumno seleccionado.
      */
     fun agregarOActualizarProfesorConAsignacion(profesor: ProfesorEntity, alumnoIdSeleccionado: Int?) {
         viewModelScope.launch {
-            if (profesor.id == 0) {
-                // insert + assign (transaccional en repo)
-                val newId = profesorRepository.addProfesorAndAssignAlumno(profesor, alumnoIdSeleccionado)
-                // StateFlow/Room refrescará automáticamente la lista
+            val finalId = if (profesor.id == 0) {
+                // Insertar nuevo profesor
+                val newId = profesorRepository.addProfesor(profesor)
+                Log.d("ProfesorVM", "Insertado profesor id=$newId")
+                newId.toInt()
             } else {
-                // update profesor
                 profesorRepository.updateProfesor(profesor)
-                // asignar/desasignar alumno si procede
-                asignarAlumnoAProfesor(alumnoIdSeleccionado, profesor.id)
+                profesor.id
             }
+
+            // Aplicar la asignación de alumno
+            asignarAlumnoAProfesor(alumnoIdSeleccionado, finalId)
         }
     }
 
     fun eliminarProfesor(profesor: ProfesorEntity) {
         viewModelScope.launch {
-            // Desasigna alumnos que apuntan a este profesor
-            val alumnosAsignados = alumnos.value.filter { it.profesorInstructor == profesor.id }
-            alumnosAsignados.forEach { alumno ->
+            // Desvincular alumnos asignados a este profesor
+            val asignados = alumnos.value.filter { it.profesorInstructor == profesor.id }
+            asignados.forEach { alumno ->
                 alumnoRepository.updateAlumno(alumno.copy(profesorInstructor = null))
+                Log.d("ProfesorVM", "Desasignado alumno ${alumno.id} del profesor eliminado")
             }
+
             profesorRepository.deleteProfesor(profesor)
+            Log.d("ProfesorVM", "Profesor eliminado id=${profesor.id}")
         }
     }
 
@@ -94,27 +122,29 @@ class ProfesorViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Asigna (o desasigna si alumnoId == null) un alumno al profesor especificado.
+     * Asignación corregida:
+     * - Primero desasigna cualquier alumno que esté asignado a este profesor
+     * - Luego asigna el nuevo alumno si se proporcionó
      */
-    fun asignarAlumnoAProfesor(alumnoId: Int?, profesorId: Int) {
-        viewModelScope.launch {
-            val previamenteAsignados = alumnos.value.filter { it.profesorInstructor == profesorId }
-            Log.d("ProfesorVM", "previosAsignados=${previamenteAsignados.map { it.id }}")
-
-            previamenteAsignados.forEach { alumno ->
-                alumnoRepository.updateAlumno(alumno.copy(profesorInstructor = null))
-            }
-
-            if (alumnoId != null) {
-                val alumno = alumnos.value.find { it.id == alumnoId }
-                if (alumno != null) {
-                    alumnoRepository.updateAlumno(alumno.copy(profesorInstructor = profesorId))
-                    Log.d("ProfesorVM", "asignado alumno ${alumno.id} -> prof $profesorId")
-                } else {
-                    Log.d("ProfesorVM", "alumno a asignar no encontrado en memoria: $alumnoId")
-                }
-            }
-            Log.d("ProfesorVM", "asignarAlumnoAProfesor end")
+    private suspend fun asignarAlumnoAProfesor(alumnoId: Int?, profesorId: Int) {
+        // 1. Desasignar alumnos actualmente asignados a este profesor
+        val alumnosActualmenteAsignados = alumnos.value.filter { it.profesorInstructor == profesorId }
+        alumnosActualmenteAsignados.forEach { alumno ->
+            alumnoRepository.updateAlumno(alumno.copy(profesorInstructor = null))
+            Log.d("ProfesorVM", "Desasignado alumno ${alumno.id} del profesor $profesorId")
         }
+
+        // 2. Asignar nuevo alumno si se proporcionó
+        if (alumnoId != null) {
+            val alumnoParaAsignar = alumnos.value.find { it.id == alumnoId }
+            if (alumnoParaAsignar != null) {
+                alumnoRepository.updateAlumno(alumnoParaAsignar.copy(profesorInstructor = profesorId))
+                Log.d("ProfesorVM", "Asignado alumno ${alumnoParaAsignar.id} al profesor $profesorId")
+            } else {
+                Log.e("ProfesorVM", "Error: alumno $alumnoId no encontrado")
+            }
+        }
+
+        Log.d("ProfesorVM", "Asignación completada - Profesor: $profesorId, Alumno: $alumnoId")
     }
-        }
+}

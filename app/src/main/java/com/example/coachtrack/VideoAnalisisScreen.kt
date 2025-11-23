@@ -3,6 +3,7 @@ package com.example.coachtrack
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -23,6 +24,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import com.example.coachtrack.DialogCompartir
+import com.example.coachtrack.DropdownMenuDemo
+import com.example.coachtrack.ShareOption
+import com.example.coachtrack.compartirTexto
+import com.example.coachtrack.compartirVideoOTexto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -31,6 +37,14 @@ import kotlin.io.path.createTempFile
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
+
+
+    //---------------BACHHANDLER PARA ESTA PANTALLA-------------------
+
+    BackHandler {
+        onVolverClick()
+    }
+
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

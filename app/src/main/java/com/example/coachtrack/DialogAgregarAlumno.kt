@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.coachtrack.NivelDropdownSelector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,11 +65,12 @@ fun DialogAgregarAlumno(
                                 objetivo = objetivo.text,
                                 clasesPactadas = clasesPactadas,
                                 clasesCursadas = 0,
-                                estadoPago = EstadoPago.PENDIENTE,
+                                estadoPago = EstadoPago.PENDIENTE.name,
                                 edad = 0,
                                 telefono = telefono.text,
                                 direccion = direccion.text,
-                                notasEntrenador = ""
+                                notasEntrenador = "",
+                                profesorInstructor = null
                             )
                         }
                         onGuardar(alumnoFinal)

@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -41,9 +42,8 @@ fun AppNavigation() {
                 onVolverClick = { currentScreen = AppScreen.Principal },
                 onGestionAlumnosClick = { currentScreen = AppScreen.Cartera },
                 onHistorialAlumnosClick = { currentScreen = AppScreen.Historial },
-                // ✅ NAVEGACIÓN A GESTIÓN DE PROFESORES
                 onGestionProfesoresClick = { currentScreen = AppScreen.GestionProfesores },
-                onPagosClick = { /* futuro */ }
+                onPagosClick = {currentScreen=AppScreen.Pagos }
             )
 
             // ✅ NUEVO CASO DE NAVEGACIÓN AÑADIDO
@@ -67,6 +67,11 @@ fun AppNavigation() {
                 onVolver = { currentScreen = AppScreen.Gestion },
                 onAbrirFichaAlumno = { /* futuro */ }
             )
+            AppScreen.Pagos -> PagosScreen(
+                //viewModel= androidx.lifecycle.compose.viewModel(),
+                onVolver = { currentScreen = AppScreen.Gestion }
+            )
+
 
             else -> CoachTrackSplashScreen(
                 onSplashFinished = { currentScreen = AppScreen.Principal }

@@ -1,6 +1,6 @@
 package com.example.coachtrack
 
-import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.collections.filter
-import kotlin.collections.find
 import kotlin.collections.isNotEmpty
 import kotlin.collections.joinToString
 
@@ -28,26 +27,33 @@ fun GestionProfesoresScreen(
     viewModel: ProfesorViewModel = viewModel(),
     onVolverClick: () -> Unit
 ) {
-    // Observamos las listas (StateFlow -> State)
     val profesores by viewModel.profesores.collectAsState()
     val alumnos by viewModel.alumnos.collectAsState()
+    // 🎯 CORRECCIÓN: Usar alumnosDisponibles en lugar de alumnos
+    val alumnosDisponibles by viewModel.alumnosDisponibles.collectAsState()
 
-    // Estados UI expuestos desde el ViewModel (MutableState) -> leemos .value
     val showDialog = viewModel.mostrarDialogoAgregar.value
     val profesorAEditar = viewModel.profesorEnEdicion.value
 
     val state = ProfesorListState(
         profesores = profesores,
-        alumnosDisponibles = alumnos,
-        isLoading = false
+        alumnosDisponibles = alumnos // Esto se mantiene para la lista de profesores
     )
+
+    BackHandler {
+        if (showDialog) {
+            viewModel.cerrarDialogoAgregar()
+        } else {
+            onVolverClick()
+        }
+    }
 
     GestionProfesoresScreenContent(
         state = state,
+        // 🎯 CORRECCIÓN: Pasar alumnosDisponibles al contenido
+        alumnosDisponibles = alumnosDisponibles,
         onVolverClick = onVolverClick,
-        // para compatibilidad mantenemos onGuardarProfesor simple (sin asignación)
         onGuardarProfesor = viewModel::agregarOActualizarProfesor,
-        // nueva lambda que crea/actualiza y opcionalmente asigna alumno
         onGuardarConAsignacion = viewModel::agregarOActualizarProfesorConAsignacion,
         onEliminarProfesor = viewModel::eliminarProfesor,
         onCountAssignedAlumnos = viewModel::countAlumnosAsignados,
@@ -60,14 +66,15 @@ fun GestionProfesoresScreen(
 
 data class ProfesorListState(
     val profesores: List<ProfesorEntity> = emptyList(),
-    val alumnosDisponibles: List<AlumnoEntity> = emptyList(),
-    val isLoading: Boolean = false
+    val alumnosDisponibles: List<AlumnoEntity> = emptyList()
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GestionProfesoresScreenContent(
     state: ProfesorListState,
+    // 🎯 CORRECCIÓN: Nuevo parámetro para alumnos disponibles
+    alumnosDisponibles: List<AlumnoEntity>,
     onVolverClick: () -> Unit,
     onGuardarProfesor: (ProfesorEntity) -> Unit,
     onGuardarConAsignacion: (ProfesorEntity, Int?) -> Unit,
@@ -79,14 +86,12 @@ fun GestionProfesoresScreenContent(
     profesorAEditar: ProfesorEntity?
 ) {
 
-    val onProfesorClick: (ProfesorEntity) -> Unit = { profesor ->
-        Log.d("GestionProfesoresScreen", "Edit clicked prof=${profesor.id} alumnosCount=${state.alumnosDisponibles.size} assignedId=${
-            state.alumnosDisponibles.find { it.profesorInstructor == profesor.id }?.id
-        }")
-        state.alumnosDisponibles.forEach { alumno ->
-            Log.d("GestionProfesoresScreen", "alumno id=${alumno.id} nombre=${alumno.nombre} profesorInstructor=${alumno.profesorInstructor}")
+    BackHandler(enabled = true) {
+        if (showDialog) {
+            onCerrarDialogo()
+        } else {
+            onVolverClick()
         }
-        onAbrirDialogo(profesor)
     }
 
     Scaffold(
@@ -95,29 +100,26 @@ fun GestionProfesoresScreenContent(
                 title = { Text("Gestión de Colegas") },
                 navigationIcon = {
                     IconButton(onClick = onVolverClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver a Gestión")
+                        Icon(Icons.Default.ArrowBack, "Volver")
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { onAbrirDialogo(null) }) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Colega")
+                Icon(Icons.Default.Add, "Agregar Colega")
             }
         }
     ) { padding ->
-        // Mostramos mensaje si no hay profesores pero no hacemos early-return (para que el diálogo se muestre)
+
         if (state.profesores.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No has agregado colegas. Pulsa '+' para añadir un nuevo profesor y delegar alumnos.",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium
+                    "No has agregado colegas. Pulsa '+' para añadir uno.",
+                    textAlign = TextAlign.Center
                 )
             }
         } else {
@@ -126,38 +128,35 @@ fun GestionProfesoresScreenContent(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(state.profesores, key = { it.id }) { profesor ->
-                    val asignados = state.alumnosDisponibles.filter { it.profesorInstructor == profesor.id }
+                    val alumnosAsignados = state.alumnosDisponibles.filter { it.profesorInstructor == profesor.id }
+
                     ProfesorCard(
                         profesor = profesor,
+                        alumnosAsignados = alumnosAsignados,
                         alumnosAsignadosCount = onCountAssignedAlumnos(profesor.id),
-                        alumnosAsignados = asignados,
-                        onEdit = onProfesorClick,
+                        onEdit = onAbrirDialogo,
                         onDelete = onEliminarProfesor
                     )
                 }
             }
         }
 
-        // Mostrar el diálogo (sheet) si corresponde
         if (showDialog) {
             DialogAgregarProfesor(
                 profesorExistente = profesorAEditar,
-                alumnosDisponibles = state.alumnosDisponibles,
+                // 🎯 CORRECCIÓN: Pasar alumnosDisponibles (solo los disponibles)
+                alumnosDisponibles = alumnosDisponibles,
                 onDismiss = onCerrarDialogo,
-                onGuardar = { profesor, alumnoSeleccionado ->
-                    // Si es nuevo (id == 0) usamos el flujo que inserta y asigna en una llamada
-                    if (profesor.id == 0) {
-                        onGuardarConAsignacion(profesor, alumnoSeleccionado)
-                    } else {
-                        // Si ya existía, actualizamos y si hay alumno seleccionado lo asignamos después
+                onGuardar = { profesor, alumnoAsignado ->
+                    if (profesor.id == 0)
+                        onGuardarConAsignacion(profesor, alumnoAsignado)
+                    else {
                         onGuardarProfesor(profesor)
-                        if (alumnoSeleccionado != null) {
-                            onGuardarConAsignacion(profesor, alumnoSeleccionado)
-                        }
+                        if (alumnoAsignado != null)
+                            onGuardarConAsignacion(profesor, alumnoAsignado)
                     }
                     onCerrarDialogo()
                 }
@@ -170,45 +169,30 @@ fun GestionProfesoresScreenContent(
 fun ProfesorCard(
     profesor: ProfesorEntity,
     alumnosAsignadosCount: Int,
-    alumnosAsignados: List<AlumnoEntity> = emptyList(),
+    alumnosAsignados: List<AlumnoEntity>,
     onEdit: (ProfesorEntity) -> Unit,
     onDelete: (ProfesorEntity) -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onEdit(profesor) }
+        Modifier.fillMaxWidth().clickable { onEdit(profesor) }
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = profesor.nombre,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Especialidad: ${profesor.especialidad}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            Column(Modifier.weight(1f)) {
+                Text(profesor.nombre, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Especialidad: ${profesor.especialidad}")
 
                 if (alumnosAsignados.isNotEmpty()) {
                     Text(
-                        text = "Alumno${if (alumnosAsignados.size > 1) "s" else ""} asignado${if (alumnosAsignados.size > 1) "s" else ""}: " +
-                                alumnosAsignados.joinToString { it.nombre },
-                        style = MaterialTheme.typography.bodyMedium,
+                        "Alumnos: ${alumnosAsignados.joinToString { it.nombre }}",
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     Text(
-                        text = "Alumnos Asignados: $alumnosAsignadosCount",
-                        style = MaterialTheme.typography.bodyMedium,
+                        "Alumnos asignados: $alumnosAsignadosCount",
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -216,10 +200,10 @@ fun ProfesorCard(
 
             Row {
                 IconButton(onClick = { onEdit(profesor) }) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar Colega")
+                    Icon(Icons.Default.Edit, "Editar")
                 }
                 IconButton(onClick = { onDelete(profesor) }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Eliminar Colega")
+                    Icon(Icons.Default.Delete, "Eliminar")
                 }
             }
         }

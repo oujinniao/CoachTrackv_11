@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.coachtrack.SesionGuardadaCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +36,8 @@ fun DashboardScreen(
     val alumnos by viewModel.alumnos.collectAsState()
 
     // Cálculo de estado de pagos
-    val alumnosConDeuda = alumnos.filter { it.estadoPago == EstadoPago.DEUDA }
-    val alumnosPendientes = alumnos.filter { it.estadoPago == EstadoPago.PENDIENTE }
+    val alumnosConDeuda = alumnos.filter { it.estadoPago == EstadoPago.DEUDA.name }
+    val alumnosPendientes = alumnos.filter { it.estadoPago == EstadoPago.PENDIENTE.name }
     val totalAlertas = alumnosConDeuda.size + alumnosPendientes.size
     val colorAlerta = if (alumnosConDeuda.isNotEmpty()) Color(0xFFE53935) else Color(0xFFFFC107)
 
@@ -163,7 +164,7 @@ fun DashboardScreen(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Total de alumnos: ${alumnos.size}")
-                        Text("Al día: ${alumnos.count { it.estadoPago == EstadoPago.ADELANTADO }}")
+                        Text("Al día: ${alumnos.count { it.estadoPago == EstadoPago.ADELANTADO.name }}")
                         Text("Pendientes: ${alumnosPendientes.size}")
                         Text("En deuda: ${alumnosConDeuda.size}")
                     }

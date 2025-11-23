@@ -100,7 +100,8 @@ dependencies {
 
     //implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
-
+//Pagos
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
 
 
     // Testing

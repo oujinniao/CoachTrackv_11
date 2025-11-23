@@ -13,5 +13,6 @@ sealed class AppScreen {
     object Inicio : AppScreen()
     object Gestion : AppScreen()
     object GestionProfesores : AppScreen()
+    object Pagos : AppScreen()
 
 }
