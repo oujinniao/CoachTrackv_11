@@ -77,7 +77,7 @@ fun GestionProfesoresScreenContent(
     alumnosDisponibles: List<AlumnoEntity>,
     onVolverClick: () -> Unit,
     onGuardarProfesor: (ProfesorEntity) -> Unit,
-    onGuardarConAsignacion: (ProfesorEntity, Int?) -> Unit,
+    onGuardarConAsignacion: (ProfesorEntity, String?) -> Unit,
     onEliminarProfesor: (ProfesorEntity) -> Unit,
     onCountAssignedAlumnos: (Int) -> Int,
     onAbrirDialogo: (ProfesorEntity?) -> Unit,

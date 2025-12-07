@@ -24,7 +24,8 @@ fun DialogAgregarProfesor(
     profesorExistente: ProfesorEntity?,
     alumnosDisponibles: List<AlumnoEntity>,
     onDismiss: () -> Unit,
-    onGuardar: (ProfesorEntity, Int?) -> Unit
+    // ID del alumno seleccionado es String? (ID de Firebase)
+    onGuardar: (ProfesorEntity, String?) -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
@@ -49,8 +50,9 @@ fun DialogAgregarProfesor(
         mutableStateOf(TextFieldValue(profesorExistente?.disponibilidad ?: ""))
     }
 
-    // Estados para los dropdowns - ¡AMBOS!
-    var alumnoSeleccionado by rememberSaveable { mutableStateOf<Int?>(null) }
+    // Estados para los dropdowns
+    // 1. CORRECCIÓN MANTENIDA: ID del alumno es String?
+    var alumnoSeleccionado by rememberSaveable { mutableStateOf<String?>(null) }
     var expandedAlumno by remember { mutableStateOf(false) }
 
     var expandedEspecialidad by remember { mutableStateOf(false) }
@@ -59,7 +61,10 @@ fun DialogAgregarProfesor(
     // Inicializar alumno seleccionado
     LaunchedEffect(profesorExistente, alumnosDisponibles) {
         if (profesorExistente != null) {
+            // Lógica de búsqueda correcta: Int? (profesorInstructor) se compara con Int (profesorExistente.id)
             val alumnoAsignado = alumnosDisponibles.find { it.profesorInstructor == profesorExistente.id }
+
+            // Asignar el ID del alumno (String?) al estado (String?)
             alumnoSeleccionado = alumnoAsignado?.id
         }
     }
@@ -238,6 +243,7 @@ fun DialogAgregarProfesor(
                         }
                     ) {
                         OutlinedTextField(
+                            // Busca el alumno por su ID (String)
                             value = alumnosDisponibles.find { it.id == alumnoSeleccionado }?.nombre
                                 ?: "Sin asignar",
                             onValueChange = {},
@@ -268,6 +274,7 @@ fun DialogAgregarProfesor(
                                 DropdownMenuItem(
                                     text = { Text(alumno.nombre) },
                                     onClick = {
+                                        // Asigna la ID de Firebase (String)
                                         alumnoSeleccionado = alumno.id
                                         expandedAlumno = false
                                     }
@@ -322,6 +329,7 @@ fun DialogAgregarProfesor(
                     Button(
                         onClick = {
                             val profesorFinal = ProfesorEntity(
+                                // 2. CORRECCIÓN: Se revierte a Int, usando 0 como fallback porque ProfesorEntity.id es Int
                                 id = profesorExistente?.id ?: 0,
                                 nombre = nombre.text,
                                 especialidad = especialidad,
@@ -330,6 +338,7 @@ fun DialogAgregarProfesor(
                                 descripcion = descripcion.text,
                                 disponibilidad = disponibilidad.text
                             )
+                            // El segundo parámetro es String?
                             onGuardar(profesorFinal, alumnoSeleccionado)
                             scope.launch { sheetState.hide() }
                         }

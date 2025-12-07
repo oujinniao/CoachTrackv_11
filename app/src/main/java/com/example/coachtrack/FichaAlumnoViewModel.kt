@@ -37,7 +37,7 @@ class FichaAlumnoViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             _alumno.value?.let { alumno ->
                 val entity = AlumnoEntity(
-                    id = alumno.id.toIntOrNull() ?: 0,
+                    id = alumno.id,
                     nombre = alumno.nombre,
                     nivelActual = alumno.nivelActual,
                     objetivo = alumno.objetivo ?: "",

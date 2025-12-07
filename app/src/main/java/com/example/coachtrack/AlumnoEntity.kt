@@ -2,17 +2,18 @@ package com.example.coachtrack
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.google.android.play.integrity.internal.o
+
 
 
 @Entity(tableName = "alumnos")
 data class AlumnoEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey
+    val id: String = "",
     val nombre: String = "",
     val nivelActual: String = "",
     val objetivo: String = "",
-    val clasesPactadas: Int,
-    val clasesCursadas: Int,
+    val clasesPactadas: Int=0,
+    val clasesCursadas: Int=0,
     val estadoPago: String = EstadoPago.PENDIENTE.name,
     val edad: Int = 0,
     val telefono: String = "",

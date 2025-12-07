@@ -1,28 +1,22 @@
 package com.example.coachtrack
 
-
-import android.app.Application
+import android.util.Log
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.coachtrack.FiltroChip
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,217 +25,226 @@ fun CarteraScreen(
     onVolver: () -> Unit,
     onAbrirFichaAlumno: (AlumnoEntity) -> Unit
 ) {
-    //---------------BACKHANDLER PARA ESTA PANTALLA-----------------------
+    val TAG = "CarteraScreen"
+
     BackHandler(onBack = onVolver)
 
+    val auth = Firebase.auth
 
-    val context = LocalContext.current
-    val carteraViewModel: CarteraViewModel = viewModel(
-        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
-            .getInstance(context.applicationContext as Application)
-    )
-
-    val alumnos by carteraViewModel.alumnos.collectAsState()
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    var filtro by remember { mutableStateOf("Todos") }
-
-    // ========= FILTRO DE ALUMNOS =========
-    val alumnosFiltrados = when (filtro) {
-        "Al día" -> alumnos.filter { it.estadoPago == EstadoPago.ADELANTADO.name }
-        "Pendiente" -> alumnos.filter { it.estadoPago == EstadoPago.PENDIENTE.name }
-        "Deuda" -> alumnos.filter { it.estadoPago == EstadoPago.DEUDA.name }
-        else -> alumnos
+    LaunchedEffect(Unit) {
+        Log.d(TAG, "═══════════════════════════════════════")
+        Log.d(TAG, "🎬 CarteraScreen COMPOSADA")
+        Log.d(TAG, "Auth instance: ${auth.hashCode()}")
+        Log.d(TAG, "CurrentUser es null? ${auth.currentUser == null}")
+        Log.d(TAG, "CurrentUser ID: ${auth.currentUser?.uid ?: "NULL"}")
+        Log.d(TAG, "═══════════════════════════════════════")
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Cartera de Alumnos") },
-                navigationIcon = {
-                    IconButton(onClick = onVolver) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
+    var authState by remember { mutableStateOf(auth.currentUser) }
+
+    DisposableEffect(Unit) {
+        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            authState = user
+            Log.d(TAG, "🔄 AuthStateListener disparado:")
+            Log.d(TAG, "   User: ${user?.uid ?: "NULL"}")
+            Log.d(TAG, "   Cambio: ${auth.currentUser?.uid ?: "NULL"} → ${user?.uid ?: "NULL"}")
+        }
+
+        auth.addAuthStateListener(listener)
+
+        onDispose {
+            auth.removeAuthStateListener(listener)
+        }
+    }
+
+    when {
+        authState == null -> {
+            // ------- SIN USUARIO AUTENTICADO -------
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Error,
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(80.dp)
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        "🔍 DIAGNÓSTICO: auth.currentUser es NULL",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "MainActivity debería haber autenticado.\n" +
+                                "Revisa Logcat con filtro: 'CoachTrackAuth'",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = {
+                            Log.d(TAG, "Usuario presionó: Intentar autenticación MANUAL")
+                            auth.signInAnonymously()
+                                .addOnCompleteListener { task ->
+                                    Log.d(TAG, "Resultado manual: ${if (task.isSuccessful) "ÉXITO" else "FALLA"}")
+                                }
+                        },
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Reintentar")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Autenticar MANUALMENTE")
                     }
-                },
-                actions = {
-                    TextButton(onClick = { carteraViewModel.eliminarTodos() }) {
-                        Text("🧹", color = Color.Red)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedButton(
+                        onClick = onVolver,
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Volver al menú")
                     }
                 }
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { carteraViewModel.abrirDialogoAgregar() },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Alumno")
             }
         }
-    ) { paddingValues ->
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-        ) {
+        else -> {
+            // ------- USUARIO AUTENTICADO -------
+            Log.d(TAG, "✅ MOSTRANDO PANTALLA NORMAL para usuario: ${authState!!.uid}")
 
-            // ========= RESUMEN ==========
-            val total = alumnos.size
-            val alDia = alumnos.count { it.estadoPago == EstadoPago.ADELANTADO.name }
-            val pendientes = alumnos.count { it.estadoPago == EstadoPago.PENDIENTE.name }
-            val deudas = alumnos.count { it.estadoPago == EstadoPago.DEUDA.name }
+            val carteraViewModel: CarteraViewModel = viewModel()
+            val alumnos by carteraViewModel.alumnos.collectAsState()
+            val snackbarHostState = remember { SnackbarHostState() }
+            val scope = rememberCoroutineScope()
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F3F3))
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("📊 Resumen Financiero", fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Total de alumnos: $total")
-                    Text("🟢 Al día: $alDia")
-                    Text("🟡 Pendientes: $pendientes")
-                    Text("🔴 En deuda: $deudas")
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("Cartera de Alumnos")
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ) {
+                                    Text("✓")
+                                }
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onVolver) {
+                                Icon(
+                                    Icons.Filled.ArrowBack,
+                                    contentDescription = "Volver al menú"
+                                )
+                            }
+                        },
+                        actions = {
+                            Text(
+                                text = "👤 ${authState!!.uid.take(6)}...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+                    )
+                },
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = { carteraViewModel.abrirDialogoAgregar() },
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Agregar Alumno")
+                    }
                 }
-            }
-
-            // ========= FILTRO UI =========
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                FiltroChip("Todos", filtro) { filtro = it }
-                FiltroChip("Al día", filtro) { filtro = it }
-                FiltroChip("Pendiente", filtro) { filtro = it }
-                FiltroChip("Deuda", filtro) { filtro = it }
-            }
-
-            // ========= LISTA =========
-            if (alumnosFiltrados.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No hay alumnos en esta categoría")
-                }
-            } else {
-                LazyColumn(
+            ) { paddingValues ->
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 80.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp)
                 ) {
-                    items(alumnosFiltrados, key = { it.id }) { alumno ->
-                        var eliminado by remember { mutableStateOf(false) }
-
-                        val scaleAnim by animateFloatAsState(
-                            targetValue = if (eliminado) 0f else 1f,
-                            animationSpec = spring(),
-                            finishedListener = {
-                                if (eliminado) {
-                                    scope.launch { carteraViewModel.eliminarAlumno(alumno) }
-                                }
-                            }
-                        )
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .scale(scaleAnim)
-                                .clickable { onAbrirFichaAlumno(alumno) },
-                            colors = CardDefaults.cardColors(
-                                containerColor = when (alumno.estadoPago) {
-                                    EstadoPago.ADELANTADO.name -> Color(0xFFDFF8E1)
-                                    EstadoPago.PENDIENTE.name -> Color(0xFFFFF8E1)
-                                    EstadoPago.DEUDA.name -> Color(0xFFFFEBEE)
-                                    else -> Color.White
-                                }
-                            )
+                    // tarjeta de “autenticado”
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        alumno.nombre,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        "Nivel: ${alumno.nivelActual} | ${alumno.clasesCursadas}/${alumno.clasesPactadas} clases",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    Text(
-                                        "Pago: ${alumno.estadoPago}",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-
-                                IconButton(onClick = {
-                                    carteraViewModel.abrirDialogoAgregar(alumno)
-                                }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Editar")
-                                }
-
-                                IconButton(onClick = { eliminado = true }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red)
-                                }
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Autenticado",
+                                tint = Color.Green,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    "✅ Autenticado correctamente",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Green
+                                )
+                                Text(
+                                    "ID: ${authState!!.uid.take(12)}...",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Gray
+                                )
                             }
                         }
                     }
+
+                    // Aquí iría tu lista de alumnos, filtros, etc.
+                    Text(
+                        "Pantalla funcionando - Botón (+) disponible",
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                }
+
+                // 🔹 MOSTRAR DIÁLOGO CUANDO EL VM LO PIDA
+                if (carteraViewModel.mostrarDialogoAgregar) {
+                    DialogAgregarAlumno(
+                        alumnoExistente = carteraViewModel.alumnoEnEdicion,
+                        onDismiss = { carteraViewModel.cerrarDialogoAgregar() },
+                        onGuardar = { alumno ->
+                            carteraViewModel.agregarOActualizarAlumno(alumno) { exito, fueActualizacion ->
+                                scope.launch {
+                                    val mensaje = when {
+                                        !exito -> "No se pudo guardar (duplicado o error)."
+                                        fueActualizacion -> "Alumno actualizado correctamente."
+                                        else -> "Alumno agregado correctamente."
+                                    }
+                                    snackbarHostState.showSnackbar(mensaje)
+                                }
+                                if (exito) {
+                                    carteraViewModel.cerrarDialogoAgregar()
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }
-    }
-
-    // ========= DIÁLOGO =========
-    if (carteraViewModel.mostrarDialogoAgregar) {
-        DialogAgregarAlumno(
-            alumnoExistente = carteraViewModel.alumnoEnEdicion,
-            onDismiss = { carteraViewModel.cerrarDialogoAgregar() },
-            onGuardar = { alumno ->
-                carteraViewModel.agregarOActualizarAlumno(alumno) { exito, actualizado ->
-                    scope.launch {
-                        when {
-                            !exito -> snackbarHostState.showSnackbar("⚠️ El alumno ya existe en tu cartera")
-                            actualizado -> snackbarHostState.showSnackbar("✅ Alumno actualizado correctamente")
-                            else -> snackbarHostState.showSnackbar("✅ Alumno agregado correctamente")
-                        }
-                    }
-                }
-                carteraViewModel.cerrarDialogoAgregar()
-            }
-        )
-    }
-}
-
-@Composable
-fun FiltroChip(
-    texto: String,
-    seleccionado: String,
-    onClick: (String) -> Unit
-) {
-    val isSelected = texto == seleccionado
-
-    Surface(
-        shape = CircleShape,
-        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
-        modifier = Modifier.clickable { onClick(texto) }
-    ) {
-        Text(
-            text = texto,
-            color = if (isSelected) Color.White else Color.Black,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }

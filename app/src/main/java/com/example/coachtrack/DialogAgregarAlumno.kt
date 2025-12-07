@@ -59,7 +59,7 @@ fun DialogAgregarAlumno(
                             )
                         } else {
                             AlumnoEntity(
-                                id = 0,
+                                id = "",
                                 nombre = nombre.text,
                                 nivelActual = nivel,
                                 objetivo = objetivo.text,

@@ -36,7 +36,7 @@ class AppViewModelFactory(private val application: Application) : ViewModelProvi
         @Suppress("UNCHECKED_CAST")
         return when {
             modelClass.isAssignableFrom(CarteraViewModel::class.java) ->
-                CarteraViewModel(application) as T
+                CarteraViewModel() as T
 
             modelClass.isAssignableFrom(SesionViewModel::class.java) ->
                 SesionViewModel(application) as T
