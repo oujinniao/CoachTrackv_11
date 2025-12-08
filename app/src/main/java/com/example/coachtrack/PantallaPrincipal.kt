@@ -2,6 +2,7 @@ package com.example.coachtrack
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,8 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-import com.example.coachtrack.BotonFuncionalidad
-import com.example.coachtrack.TopAppBarPrincipal
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun PantallaPrincipal(
@@ -21,8 +21,14 @@ fun PantallaPrincipal(
     userId: String,
     onCerrarSesion: (() -> Unit)? = null
 ) {
-
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
+
+    // 🔹 ViewModel del perfil del profesor
+    val perfilViewModel: PerfilProfesorViewModel = viewModel()
+    val perfil by perfilViewModel.perfil.collectAsState()
+
+    // 🔹 Control del diálogo para editar el perfil
+    var mostrarDialogoPerfil by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopAppBarPrincipal() }
@@ -37,22 +43,62 @@ fun PantallaPrincipal(
         ) {
 
             //------------------------------------
-            // CARD DATOS ENTRENADOR
+            // CARD DATOS ENTRENADOR (DINÁMICA)
             //------------------------------------
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 16.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Prof. Alejandro González", style = MaterialTheme.typography.titleLarge)
-                    Text("Academia Central de Tenis", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "ID Usuario: $userId",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // Nombre del profesor
+                        Text(
+                            text = if (perfil.nombreProfesor.isNotBlank())
+                                "Prof. ${perfil.nombreProfesor}"
+                            else
+                                "Configura tu nombre",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        // Academia / club
+                        Text(
+                            text = if (perfil.academia.isNotBlank())
+                                perfil.academia
+                            else
+                                "Añade tu academia / club",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // ID de usuario (prefiere el guardado, si no, el que viene por parámetro)
+                        val uidToShow = perfil.userId.ifBlank { userId }
+                        if (uidToShow.isNotBlank()) {
+                            Text(
+                                "ID Usuario: $uidToShow",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    }
+
+                    // Botón para editar el perfil
+                    IconButton(onClick = { mostrarDialogoPerfil = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar perfil"
+                        )
+                    }
                 }
             }
 
@@ -70,7 +116,7 @@ fun PantallaPrincipal(
             Spacer(modifier = Modifier.height(16.dp))
 
             //------------------------------------
-            // BOTÓN GESTIÓN (NUEVO)
+            // BOTÓN GESTIÓN
             //------------------------------------
             BotonFuncionalidad(
                 texto = "GESTIÓN",
@@ -109,7 +155,7 @@ fun PantallaPrincipal(
             }
 
             //------------------------------------
-            // DIÁLOGO CONFIRMACIÓN
+            // DIÁLOGO CONFIRMACIÓN CERRAR SESIÓN
             //------------------------------------
             if (mostrarDialogoCerrarSesion) {
                 AlertDialog(
@@ -133,6 +179,20 @@ fun PantallaPrincipal(
             }
         }
     }
+
+    //------------------------------------
+    // DIÁLOGO EDITAR PERFIL PROFESOR
+    //------------------------------------
+    if (mostrarDialogoPerfil) {
+        DialogEditarPerfilProfesor(
+            perfilActual = perfil,
+            onDismiss = { mostrarDialogoPerfil = false },
+            onGuardar = { nuevoNombre, nuevaAcademia ->
+                perfilViewModel.guardarPerfil(nuevoNombre, nuevaAcademia)
+                mostrarDialogoPerfil = false
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -150,7 +210,8 @@ fun BotonFuncionalidad(texto: String, descripcion: String, onClick: () -> Unit) 
             .height(80.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary)
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
     ) {
         Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
             Text(texto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
