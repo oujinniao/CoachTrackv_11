@@ -11,8 +11,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun AppNavigation() {
-
+fun AppNavigation(
+    onLogout: () -> Unit  // 👈 nuevo parámetro
+) {
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
 
     AnimatedContent(
@@ -34,10 +35,12 @@ fun AppNavigation() {
                 onPlanificarClick = { currentScreen = AppScreen.Planificacion },
                 onGestionClick = { currentScreen = AppScreen.Gestion },
                 onVideoAnalisisClick = { currentScreen = AppScreen.VideoAnalisis },
-                userId = "demo_user",
-                onCerrarSesion = { currentScreen = AppScreen.Splash }
+                userId = "demo_user",   // luego lo cambiamos por el uid real
+                onCerrarSesion = {
+                    // Ahora el botón "Cerrar sesión" realmente cierra la sesión
+                    onLogout()
+                }
             )
-
             AppScreen.Gestion -> GestionMenuScreen(
                 onVolverClick = { currentScreen = AppScreen.Principal },
                 onGestionAlumnosClick = { currentScreen = AppScreen.Cartera },

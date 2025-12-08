@@ -1,3 +1,5 @@
+package com.example.coachtrack
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -7,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,14 +23,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +43,13 @@ fun RegisterScreen(
     onBackToLogin: () -> Unit
 ) {
     val auth = Firebase.auth
+    val context = LocalContext.current
+    val dataStore = remember { CoachProfileDataStore(context) }
+    val scope = rememberCoroutineScope()
+
+    // ⭐ Nuevos campos para la cabecera
+    var nombre by remember { mutableStateOf("") }
+    var academia by remember { mutableStateOf("") }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -51,7 +63,7 @@ fun RegisterScreen(
                 title = { Text("Crear cuenta CoachTrack") },
                 navigationIcon = {
                     IconButton(onClick = onBackToLogin) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -62,9 +74,41 @@ fun RegisterScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
+            // ---------- Nombre profesor ----------
+            OutlinedTextField(
+                value = nombre,
+                onValueChange = { nombre = it },
+                label = { Text("Nombre del profesor") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    capitalization = KeyboardCapitalization.Words
+                )
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // ---------- Academia / Club ----------
+            OutlinedTextField(
+                value = academia,
+                onValueChange = { academia = it },
+                label = { Text("Academia / Club (opcional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    capitalization = KeyboardCapitalization.Words
+                )
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // ---------- Email ----------
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -79,6 +123,7 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(12.dp))
 
+            // ---------- Password ----------
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -112,6 +157,11 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
+                    // Validaciones básicas
+                    if (nombre.isBlank()) {
+                        errorMessage = "Ingresa el nombre del profesor"
+                        return@Button
+                    }
                     if (email.isBlank() || password.isBlank() || repeatPassword.isBlank()) {
                         errorMessage = "Completa todos los campos"
                         return@Button
@@ -130,10 +180,22 @@ fun RegisterScreen(
 
                     auth.createUserWithEmailAndPassword(email.trim(), password)
                         .addOnCompleteListener { task ->
-                            isLoading = false
                             if (task.isSuccessful) {
+                                val uid = auth.currentUser?.uid ?: ""
+
+                                // ⭐ Guardar perfil en DataStore para la cabecera
+                                scope.launch {
+                                    dataStore.guardarPerfil(
+                                        nombre = nombre.trim(),
+                                        academia = academia.trim(),
+                                        userId = uid
+                                    )
+                                }
+
+                                isLoading = false
                                 onRegisterSuccess()
                             } else {
+                                isLoading = false
                                 errorMessage = task.exception?.localizedMessage
                                     ?: "Error al crear la cuenta"
                             }

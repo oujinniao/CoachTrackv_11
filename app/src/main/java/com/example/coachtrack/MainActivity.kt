@@ -1,5 +1,6 @@
 package com.example.coachtrack
 
+import RootNavigation
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent

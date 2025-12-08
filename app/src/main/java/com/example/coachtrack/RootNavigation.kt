@@ -1,21 +1,21 @@
-package com.example.coachtrack
-
-import RegisterScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.example.coachtrack.AppNavigation
+import com.example.coachtrack.LoginScreen
+import com.example.coachtrack.RegisterScreen
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 @Composable
 fun RootNavigation(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val auth = Firebase.auth
 
-    // Si ya hay usuario (email o anónimo) → ir directo al main
-    val startDestination = if (auth.currentUser == null) "login" else "main"
+    // Durante el desarrollo, siempre partimos en login
+    val startDestination = "login"
 
     NavHost(
         navController = navController,
@@ -48,9 +48,17 @@ fun RootNavigation(modifier: Modifier = Modifier) {
             )
         }
 
-        // Tu navegación actual
         composable("main") {
-            AppNavigation()   // 👈 deja tu AppNavigation tal como está
+            AppNavigation(
+                onLogout = {
+                    // Cerrar sesión en Firebase
+                    auth.signOut()
+                    // Volver al login y limpiar el back stack
+                    navController.navigate("login") {
+                        popUpTo("main") { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
