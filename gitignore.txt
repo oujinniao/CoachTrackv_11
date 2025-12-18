@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+build/
+
+# Android
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# Logs
+*.log
+
+# Keystore (NUNCA subir)
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
