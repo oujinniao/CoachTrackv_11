@@ -1,22 +1,30 @@
 package com.example.coachtrack
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-
-
-@Entity(tableName = "alumnos")
+@Entity(
+    tableName = "alumnos",
+    indices = [Index(value = ["firebaseId"], unique = true)]
+)
 data class AlumnoEntity(
-    @PrimaryKey
-    val id: String = "",
+    @PrimaryKey(autoGenerate = true)
+    val localId: Long = 0L,
+
+    val firebaseId: String? = null,
+
     val nombre: String = "",
     val nivelActual: String = "",
     val objetivo: String = "",
-    val clasesPactadas: Int=0,
-    val clasesCursadas: Int=0,
+    val clasesPactadas: Int = 0,
+    val clasesCursadas: Int = 0,
     val estadoPago: String = EstadoPago.PENDIENTE.name,
     val edad: Int = 0,
     val telefono: String = "",
     val direccion: String = "",
     val notasEntrenador: String = "",
-    val profesorInstructor: Int?=null)
+
+    val profesorInstructor: Long? = null,
+    val profesorFirebaseId: String? = null
+)

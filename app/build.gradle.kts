@@ -49,7 +49,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4" // Ajusta según tu versión de Compose
+        kotlinCompilerExtensionVersion = "1.5.4"
     }
 }
 
@@ -93,6 +93,7 @@ dependencies {
     //Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    implementation(libs.androidx.foundation)
     kapt("androidx.room:room-compiler:2.6.1")
 
 //coroutines

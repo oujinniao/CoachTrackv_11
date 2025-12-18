@@ -1,6 +1,5 @@
 package com.example.coachtrack
 
-
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -16,8 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.coachtrack.compartirEnlace
-import com.example.coachtrack.generarEnlacePagoRealista
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,11 +23,7 @@ fun PagosScreen(
     viewModel: ProfesorViewModel = viewModel(),
     onVolver: () -> Unit
 ) {
-    //-------------BANCKHANDLER PARA ESTA PANTALLA-------------------
-    BackHandler {
-        onVolver()
-    }
-
+    BackHandler { onVolver() }
 
     val alumnos by viewModel.alumnos.collectAsState()
     val ctx = LocalContext.current
@@ -51,7 +44,9 @@ fun PagosScreen(
 
         if (alumnos.isEmpty()) {
             Box(
-                Modifier.fillMaxSize().padding(padding),
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
                 Text("No hay alumnos disponibles aún.")
@@ -65,7 +60,7 @@ fun PagosScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(alumnos, key = { it.id }) { alumno ->
+                items(alumnos, key = { it.localId }) { alumno ->
 
                     Card(
                         modifier = Modifier
@@ -74,11 +69,17 @@ fun PagosScreen(
                     ) {
                         Row(
                             Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(alumno.nombre, style = MaterialTheme.typography.titleMedium)
-                                Text("ID: ${alumno.id}", style = MaterialTheme.typography.bodySmall)
+
+                                // Muestra un ID entendible para demo:
+                                // - si existe firebaseId, úsalo (pro/futuro)
+                                // - si no, usa localId
+                                val idMostrar = alumno.firebaseId ?: alumno.localId.toString()
+                                Text("ID: $idMostrar", style = MaterialTheme.typography.bodySmall)
                             }
 
                             Button(
@@ -99,24 +100,23 @@ fun PagosScreen(
     }
 }
 
-/** ------------------------------------------------------------------
- *   ENLACE REALISTA (simula Flow, Stripe o PayPal)
- *   Esto es 100% funcional como demostración.
- *   Luego puedo ayudarte a cambiarlo por Flow.cl real.
------------------------------------------------------------------- **/
+/**
+ * Enlace realista (demo).
+ * Usamos un identificador estable para el link:
+ * - si hay firebaseId -> lo usamos (cuando exista sync)
+ * - si no hay -> usamos localId (versión básica Room)
+ */
 fun generarEnlacePagoRealista(alumno: AlumnoEntity): String {
+    val montoClases = alumno.clasesPactadas * 8000
 
-    val montoClases = alumno.clasesPactadas * 8000  // ejemplo 8.000 CLP por clase
+    val idStable = alumno.firebaseId ?: alumno.localId.toString()
 
     return "https://pago.coachtrack.app/pay?" +
             "alumno=${alumno.nombre.replace(" ", "%20")}" +
-            "&id=${alumno.id}" +
-            "&monto=${montoClases}"
+            "&id=$idStable" +
+            "&monto=$montoClases"
 }
 
-/** ------------------------------------------------------------------
- *   COMPARTIR EL ENLACE POR WHATSAPP / EMAIL / SMS / INSTAGRAM
------------------------------------------------------------------- **/
 fun compartirEnlace(context: android.content.Context, url: String, nombre: String) {
     val intent = Intent().apply {
         action = Intent.ACTION_SEND

@@ -16,6 +16,10 @@ interface SesionAgendaDao {
     @Query("SELECT * FROM sesiones_agenda WHERE fecha = :fecha ORDER BY hora")
     fun getPorFecha(fecha: String): Flow<List<SesionAgendaEntity>>
 
+    // 💡 AÑADIDO: Método para obtener sesiones agendadas por el ID del alumno (Long)
+    @Query("SELECT * FROM sesiones_agenda WHERE alumnoId = :alumnoId ORDER BY fecha DESC")
+    fun getSesionesAgendaPorAlumno(alumnoId: Long): Flow<List<SesionAgendaEntity>>
+
     @Insert
     suspend fun insert(sesion: SesionAgendaEntity)
 

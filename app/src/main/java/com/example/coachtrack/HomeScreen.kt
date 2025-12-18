@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.coachtrack.SesionGuardadaCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +44,7 @@ fun DashboardScreen(
     val sesionesEjemplo = remember {
         listOf(
             SesionDeClase(
-                sessionId = "s1",
+                sessionId = 1L,
                 fechaCreacion = "2025-01-15 10:00",
                 alumnoNombre = "Ejemplo Alumno",
                 duracionTotalMinutos = 60,

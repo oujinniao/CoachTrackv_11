@@ -14,7 +14,7 @@ data class SesionAgendaEntity(
     val id: Int = 0,
 
     @ColumnInfo(name = "alumnoId")
-    val alumnoId: Int,
+    val alumnoId: Long, // 💡 CORREGIDO: De Int a Long
 
     @ColumnInfo(name = "alumnoNombre")
     val alumnoNombre: String,

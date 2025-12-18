@@ -1,53 +1,60 @@
 package com.example.coachtrack
 
+
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.coachtrack.data.repository.AlumnoRepositoryHibrido
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.example.coachtrack.data.repository.AlumnoRepositoryHibrido
 
-class CarteraViewModel : ViewModel() {
 
-    // Repositorio con inicialización diferida
-    private val repository by lazy { AlumnoRepositoryHibrido() }
+class CarteraViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Estados para manejar errores
+    // 1. Acceso al Repositorio Híbrido a través del Service Locator
+
+    private val repository: AlumnoRepositoryHibrido =
+        (application as CoachTrackApplication).container.alumnoRepositoryHibrido
+
+    // 2. Lógica de Suscripción (Controla FREE vs. PRO)
+    // NOTA: En producción, esto se obtendría del perfil de Firebase.
+    // Por ahora, lo establecemos como PRO para probar la sincronización.
+    var isProUser by mutableStateOf(true)
+
+// ... (El resto del código es correcto y se mantiene igual) ...
+
+    private val MAX_ALUMNOS_FREE = 20
+
+    // 3. Estados de manejo de datos (Lectura de Room)
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // Estado para controlar si hay datos cargados
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // Flow de alumnos con manejo de errores
-    val alumnos = repository
+    // El Flow siempre lee de Room, garantizando el Offline-First
+    val alumnos: StateFlow<List<AlumnoEntity>> = repository
         .obtenerAlumnosDelProfesor()
         .catch { exception ->
-            // Capturar y manejar la excepción
-            _error.value = when {
-                exception is IllegalStateException &&
-                        exception.message == "Usuario no autenticado" -> {
-                    "Por favor, inicia sesión para ver los alumnos"
-                }
-                else -> "Error: ${exception.message}"
-            }
+            _error.value = "Error al leer alumnos: ${exception.message}"
             _isLoading.value = false
-            emit(emptyList()) // Devolver lista vacía en caso de error
+            emit(emptyList<AlumnoEntity>())
         }
         .stateIn(
             scope = viewModelScope,
-            started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList<AlumnoEntity>()
         )
 
     init {
-        // Cuando los datos se carguen, actualizar loading
+        // ... (código init existente) ...
         viewModelScope.launch {
             alumnos.collect {
                 _isLoading.value = false
@@ -55,9 +62,101 @@ class CarteraViewModel : ViewModel() {
         }
     }
 
+    // ----------------------------------------------------------------------
+    // 🔹 RECUPERACIÓN / SINCRONIZACIÓN INICIAL (Función PRO)
+    // ----------------------------------------------------------------------
+    fun iniciarSincronizacionInicial() {
+        // 1. Conecta el estado del ViewModel con el Repositorio
+        repository.isCloudSyncEnabled = isProUser
+
+        if (!isProUser) {
+            println("Usuario FREE: No se ejecuta sincronización con la nube (Función PRO).")
+            return
+        }
+
+        viewModelScope.launch {
+            _error.value = null
+            try {
+                // 2. Ejecuta la recuperación (Cloud -> Room)
+                repository.sincronizarCloudARoom()
+                println("✅ Recuperación de datos PRO completada con éxito.")
+            } catch (e: Exception) {
+                _error.value = "Error al sincronizar datos iniciales: ${e.message}. Trabajando con datos locales."
+            }
+        }
+    }
+
+
     // --------------------------
-    // 🔹 Estados de la interfaz
+    // 🔹 AGREGAR / ACTUALIZAR (Con Límite FREE)
     // --------------------------
+    fun agregarOActualizarAlumno(alumno: AlumnoEntity, onResultado: (Boolean, Boolean) -> Unit) {
+        viewModelScope.launch {
+            _error.value = null
+
+            val listaActual = alumnos.value
+            val esNuevo = alumno.localId == 0L
+
+            if (esNuevo && !isProUser && listaActual.size >= MAX_ALUMNOS_FREE) {
+                _error.value = "Límite alcanzado: La versión Básica solo permite ${MAX_ALUMNOS_FREE} alumnos. Actualiza a PRO."
+                onResultado(false, false)
+                return@launch
+            }
+
+            val existe = listaActual.any {
+                it.nombre.equals(alumno.nombre, ignoreCase = true) && it.localId != alumno.localId
+            }
+            if (existe) {
+                onResultado(false, false)
+                return@launch
+            }
+
+            try {
+                // Guarda en Room (y en Cloud si corresponde)
+                repository.guardarAlumno(alumno)
+
+                val fueActualizacion = alumno.localId != 0L
+                onResultado(true, fueActualizacion)
+
+            } catch (e: IllegalStateException) {
+                _error.value = "Debe iniciar sesión para guardar alumnos."
+                onResultado(false, false)
+            } catch (e: Exception) {
+                _error.value = "Error al guardar: ${e.message}"
+                onResultado(false, false)
+            }
+        }
+    }
+
+    // --------------------------
+    // 🔹 ELIMINAR
+    // --------------------------
+    fun eliminarAlumno(alumno: AlumnoEntity) {
+        viewModelScope.launch {
+            try {
+                _error.value = null
+
+                // El repositorio maneja la eliminación local y remota (según isCloudSyncEnabled)
+                repository.eliminarAlumno(alumno)
+
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar: ${e.message}"
+            }
+        }
+    }
+
+    // --------------------------
+    // 🔹 ELIMINAR TODOS
+    // --------------------------
+    fun eliminarTodos() {
+        // NOTA: Esta función debe ser implementada en el repositorio si deseas eliminar todo,
+        // incluyendo todos los registros de la nube si el usuario es PRO.
+        viewModelScope.launch {
+            println("⚠️ eliminarTodos() llamado. Necesita implementación en el repositorio para eliminar Room y Cloud (si es PRO).")
+        }
+    }
+
+    // ... (otras funciones como abrir/cerrar diálogo y limpiar error) ...
     var mostrarDialogoAgregar by mutableStateOf(false)
         private set
 
@@ -74,70 +173,7 @@ class CarteraViewModel : ViewModel() {
         mostrarDialogoAgregar = false
     }
 
-    // --------------------------
-    // 🔹 AGREGAR / ACTUALIZAR
-    // --------------------------
-    fun agregarOActualizarAlumno(alumno: AlumnoEntity, onResultado: (Boolean, Boolean) -> Unit) {
-        viewModelScope.launch {
-            // Limpiar error anterior
-            _error.value = null
-
-            // 1. Validar duplicados LOCALMENTE
-            val listaActual = alumnos.value
-            val existe = listaActual.any {
-                it.nombre.equals(alumno.nombre, ignoreCase = true) && it.id != alumno.id
-            }
-
-            if (existe) {
-                onResultado(false, false) // ❌ Duplicado
-                return@launch
-            }
-
-            try {
-                // 2. Guardar en Firebase
-                val firestoreId = repository.guardarAlumno(alumno)
-                val fueActualizacion = alumno.id.isNotEmpty()
-                onResultado(true, fueActualizacion)
-
-            } catch (e: IllegalStateException) {
-                _error.value = "Debe iniciar sesión para guardar alumnos"
-                onResultado(false, false)
-            } catch (e: Exception) {
-                _error.value = "Error al guardar: ${e.message}"
-                onResultado(false, false)
-            }
-        }
-    }
-
-    // --------------------------
-    // 🔹 ELIMINAR
-    // --------------------------
-    fun eliminarAlumno(alumno: AlumnoEntity) {
-        viewModelScope.launch {
-            try {
-                _error.value = null
-                repository.eliminarAlumno(alumno.id.toString())
-            } catch (e: IllegalStateException) {
-                _error.value = "Debe iniciar sesión para eliminar alumnos"
-            } catch (e: Exception) {
-                _error.value = "Error al eliminar: ${e.message}"
-            }
-        }
-    }
-
-    // --------------------------
-    // 🔹 LIMPIAR ERROR
-    // --------------------------
     fun limpiarError() {
         _error.value = null
-    }
-
-    // --------------------------
-    // 🔹 ELIMINAR TODOS
-    // --------------------------
-    fun eliminarTodos() {
-        viewModelScope.launch {
-            println("⚠️ eliminarTodos() llamado. Necesita implementación para Firebase.")
-        }
     }
 }

@@ -17,7 +17,7 @@ class SesionRepository(context: Context) {
 
     fun getSesiones(): Flow<List<SesionEntity>> = dao.getAll()
 
-    fun getSesionesPorAlumno(alumnoId: Int): Flow<List<SesionEntity>> =
+    fun getSesionesPorAlumno(alumnoId: Long): Flow<List<SesionEntity>> =
         dao.getSesionesPorAlumno(alumnoId)
 
     suspend fun addSesion(sesion: SesionEntity) = dao.insert(sesion)

@@ -9,9 +9,9 @@ sealed class Screen(val route: String) {
     object Video : Screen("video")
     object Camara : Screen("camara")
     object Inicio : Screen("inicio")
-    data class FichaAlumno(val alumno: Alumnos) : Screen("ficha_alumno/${alumno.id}")
+    data class FichaAlumno(val alumno: Alumnos) : Screen("ficha_alumno/${alumno.localId}")
 
-    data class MiniPlanificacion(val alumno: Alumnos) : Screen("mini_planificacion/${alumno.id}")
+    data class MiniPlanificacion(val alumno: Alumnos) : Screen("mini_planificacion/${alumno.localId}")
 
 
 }

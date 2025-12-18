@@ -6,17 +6,49 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AlumnoDao {
 
+    // -----------------------------
+    // LECTURAS
+    // -----------------------------
     @Query("SELECT * FROM alumnos ORDER BY nombre ASC")
     fun getAll(): Flow<List<AlumnoEntity>>
 
-    @Query("SELECT * FROM alumnos WHERE id = :id LIMIT 1")
-    suspend fun getById(id: Int): AlumnoEntity?
+    @Query("SELECT * FROM alumnos WHERE firebaseId = :firebaseId LIMIT 1")
+    suspend fun getByFirebaseId(firebaseId: String): AlumnoEntity?
 
+    @Query("SELECT * FROM alumnos WHERE localId = :id LIMIT 1")
+    suspend fun getById(id: Long): AlumnoEntity?
+
+    // ✅ Necesaria para desasignar alumnos cuando se elimina un profesor
+    @Query("SELECT * FROM alumnos WHERE profesorInstructor = :profesorId")
+    suspend fun getAlumnosByProfesorId(profesorId: Long): List<AlumnoEntity>
+
+    // ✅ Necesaria para evitar duplicación en sincronización Cloud→Room
+    @Query("SELECT localId FROM alumnos WHERE firebaseId = :firebaseId LIMIT 1")
+    suspend fun getLocalIdByFirebaseId(firebaseId: String): Long?
+
+    // -----------------------------
+    // ESCRITURAS
+    // -----------------------------
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(alumno: AlumnoEntity)
+    suspend fun insert(alumno: AlumnoEntity): Long
 
     @Update
     suspend fun update(alumno: AlumnoEntity)
+
+    // ✅ “Upsert” manual: si localId==0 inserta, si no, actualiza y devuelve el id
+    @Transaction
+    suspend fun upsert(alumno: AlumnoEntity): Long {
+        return if (alumno.localId == 0L) {
+            insert(alumno)
+        } else {
+            update(alumno)
+            alumno.localId
+        }
+    }
+
+    // ✅ Para setear firebaseId después de crear el doc en Firestore
+    @Query("UPDATE alumnos SET firebaseId = :firebaseId WHERE localId = :localId")
+    suspend fun updateFirebaseId(localId: Long, firebaseId: String)
 
     @Delete
     suspend fun delete(alumno: AlumnoEntity)

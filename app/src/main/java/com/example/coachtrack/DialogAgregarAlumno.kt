@@ -17,7 +17,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.coachtrack.NivelDropdownSelector
+// 💡 ASUMIMOS que NivelDropdownSelector está definido aquí o importado
+// import com.example.coachtrack.NivelDropdownSelector
+
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController // Importar para TextFieldDefaults.colors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,12 +46,12 @@ fun DialogAgregarAlumno(
             )
         },
 
-        // BOTONES DE ACCIÓN (fijos en el pie del diálogo)
         confirmButton = {
             Button(
                 onClick = {
                     if (nombre.text.isNotBlank()) {
                         val alumnoFinal = if (alumnoExistente != null) {
+                            // Edición: Preservamos todos los campos de persistencia (localId, firebaseId, FKs)
                             alumnoExistente.copy(
                                 nombre = nombre.text,
                                 nivelActual = nivel,
@@ -58,8 +61,10 @@ fun DialogAgregarAlumno(
                                 clasesPactadas = clasesPactadas
                             )
                         } else {
+                            // ✅ Creación: Inicializamos la Entidad con IDs de Room y Firebase nulos
                             AlumnoEntity(
-                                id = "",
+                                localId = 0L, // Para que Room Autogenerate
+                                firebaseId = null, // Se asignará en el Repositorio
                                 nombre = nombre.text,
                                 nivelActual = nivel,
                                 objetivo = objetivo.text,
@@ -70,7 +75,7 @@ fun DialogAgregarAlumno(
                                 telefono = telefono.text,
                                 direccion = direccion.text,
                                 notasEntrenador = "",
-                                profesorInstructor = null
+                                profesorInstructor = null // FK local inicial
                             )
                         }
                         onGuardar(alumnoFinal)
@@ -84,20 +89,17 @@ fun DialogAgregarAlumno(
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         },
 
-        // CONTENIDO DEL FORMULARIO (Desplazable)
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 8.dp, vertical = 0.dp),
-                // 🆕 Espaciado vertical reducido a 6.dp
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // 🧍 Nombre
                 OutlinedTextField(
                     value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") },
-                    // 🆕 Altura máxima reducida
                     modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
                 // 🎾 Nivel actual
@@ -105,19 +107,16 @@ fun DialogAgregarAlumno(
                 // 🎯 Objetivo
                 OutlinedTextField(
                     value = objetivo, onValueChange = { objetivo = it }, label = { Text("Objetivo de entrenamiento") },
-                    // 🆕 Altura máxima reducida
                     modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
                 // ☎️ Teléfono
                 OutlinedTextField(
                     value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") },
-                    // 🆕 Altura máxima reducida
                     modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
                 // 📍 Dirección
                 OutlinedTextField(
                     value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección o email") },
-                    // 🆕 Altura máxima reducida
                     modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
                 )
 
@@ -131,20 +130,15 @@ fun DialogAgregarAlumno(
                         .fillMaxWidth()
                         .padding(vertical = 0.dp)
                 ) {
-                    // ⭐ Solución Final: Box con Clickable (Restar)
+                    // Restar
                     Box(
                         modifier = Modifier
-                            .size(36.dp) // Área de toque más pequeña
+                            .size(36.dp)
                             .clickable { if (clasesPactadas > 1) clasesPactadas-- }
                             .align(Alignment.CenterVertically),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Remove,
-                            contentDescription = "Restar clase",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp) // Tamaño del icono
-                        )
+                        Icon(Icons.Default.Remove, contentDescription = "Restar clase", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                     }
 
                     Text(
@@ -157,20 +151,15 @@ fun DialogAgregarAlumno(
                             .padding(vertical = 4.dp)
                     )
 
-                    // ⭐ Solución Final: Box con Clickable (Sumar)
+                    // Sumar
                     Box(
                         modifier = Modifier
-                            .size(36.dp) // Área de toque más pequeña
+                            .size(36.dp)
                             .clickable { clasesPactadas++ }
                             .align(Alignment.CenterVertically),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Agregar clase",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp) // Tamaño del icono
-                        )
+                        Icon(Icons.Default.Add, contentDescription = "Agregar clase", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                     }
                 }
             }
@@ -178,7 +167,6 @@ fun DialogAgregarAlumno(
     )
 }
 
-// Bloque NivelDropdownSelector también optimizado
 @Composable
 private fun NivelDropdownSelector(
     nivelActual: String,
@@ -212,7 +200,7 @@ private fun NivelDropdownSelector(
             enabled = false,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 60.dp) // 🆕 Altura máxima reducida aquí también
+                .heightIn(max = 60.dp)
                 .clickable { expanded = true },
             textStyle = LocalTextStyle.current.copy(color = colorNivel),
             colors = OutlinedTextFieldDefaults.colors(

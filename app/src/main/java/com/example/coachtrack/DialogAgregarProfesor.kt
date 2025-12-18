@@ -1,12 +1,13 @@
 package com.example.coachtrack
 
+import com.example.coachtrack.AlumnoEntity
+import com.example.coachtrack.ProfesorEntity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -18,18 +19,19 @@ import kotlinx.coroutines.launch
 import kotlin.collections.find
 import kotlin.collections.isNotEmpty
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DialogAgregarProfesor(
     profesorExistente: ProfesorEntity?,
     alumnosDisponibles: List<AlumnoEntity>,
     onDismiss: () -> Unit,
-    // ID del alumno seleccionado es String? (ID de Firebase)
-    onGuardar: (ProfesorEntity, String?) -> Unit
+    // ID del alumno seleccionado es Long? (ID local/Room)
+    onGuardar: (ProfesorEntity, Long?) -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scrollState = rememberScrollState()
 
     // Campos del profesor
@@ -51,21 +53,19 @@ fun DialogAgregarProfesor(
     }
 
     // Estados para los dropdowns
-    // 1. CORRECCIÓN MANTENIDA: ID del alumno es String?
-    var alumnoSeleccionado by rememberSaveable { mutableStateOf<String?>(null) }
+    var alumnoSeleccionadoIdLocal by rememberSaveable { mutableStateOf<Long?>(null) }
     var expandedAlumno by remember { mutableStateOf(false) }
 
     var expandedEspecialidad by remember { mutableStateOf(false) }
     val especialidades = listOf("Adulto", "Infantil", "Avanzado", "Principiante", "Rehabilitación")
 
-    // Inicializar alumno seleccionado
+    // Inicializar alumno seleccionado o precarga el alumno que ya está asignado a un profesor
     LaunchedEffect(profesorExistente, alumnosDisponibles) {
         if (profesorExistente != null) {
-            // Lógica de búsqueda correcta: Int? (profesorInstructor) se compara con Int (profesorExistente.id)
             val alumnoAsignado = alumnosDisponibles.find { it.profesorInstructor == profesorExistente.id }
 
-            // Asignar el ID del alumno (String?) al estado (String?)
-            alumnoSeleccionado = alumnoAsignado?.id
+            // 🔑 CORRECCIÓN: Asignar el ID local (Long?) al estado (Long?)
+            alumnoSeleccionadoIdLocal = alumnoAsignado?.localId
         }
     }
 
@@ -75,278 +75,152 @@ fun DialogAgregarProfesor(
             scope.launch { sheetState.hide() }
             onDismiss()
         },
-        modifier = Modifier.fillMaxHeight(0.9f)
+        modifier = Modifier.fillMaxHeight()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-
             // HEADER
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(
-                    onClick = {
-                        scope.launch { sheetState.hide() }
-                        onDismiss()
-                    },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(Icons.Default.ArrowBack, "Cerrar")
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
                 }
-
                 Text(
-                    if (profesorExistente == null) "Nuevo Colega" else "Editar Colega",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f)
+                    text = if (profesorExistente == null) "Nuevo Profesor" else "Editar Profesor",
+                    style = MaterialTheme.typography.headlineSmall
                 )
+                Spacer(modifier = Modifier.width(48.dp))
             }
 
-            // FORMULARIO
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp)
+            // Sección de Campos de Texto
+            Text("Detalles del Profesor", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+
+            // DROPDOWN ESPECIALIDAD
+            ExposedDropdownMenuBox(
+                expanded = expandedEspecialidad,
+                onExpandedChange = { expandedEspecialidad = it },
+                modifier = Modifier.fillMaxWidth()
             ) {
-
-                // SECCIÓN 1: Información básica
-                Text(
-                    "Información Básica",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // Nombre
                 OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre completo") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    value = especialidad,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Especialidad") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedEspecialidad) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 🔥 DROPDOWN DE ESPECIALIDAD - ¡RECUPERADO!
-                ExposedDropdownMenuBox(
+                ExposedDropdownMenu(
                     expanded = expandedEspecialidad,
-                    onExpandedChange = { expandedEspecialidad = it }
+                    onDismissRequest = { expandedEspecialidad = false }
+                ) {
+                    especialidades.forEach { item ->
+                        DropdownMenuItem(
+                            text = { Text(item) },
+                            onClick = {
+                                especialidad = item
+                                expandedEspecialidad = false
+                            }
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            // Descripción y Disponibilidad
+            OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+            OutlinedTextField(value = disponibilidad, onValueChange = { disponibilidad = it }, label = { Text("Disponibilidad") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+            Spacer(Modifier.height(16.dp))
+
+
+            // Sección de Asignación de Alumno
+            if (profesorExistente != null) {
+                Text("Asignación de Alumno (Opcional)", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+
+                // DROPDOWN DE ALUMNO
+                ExposedDropdownMenuBox(
+                    expanded = expandedAlumno,
+                    onExpandedChange = {
+                        if (alumnosDisponibles.isNotEmpty()) {
+                            expandedAlumno = it
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = especialidad,
+                        value = alumnosDisponibles.find { it.localId == alumnoSeleccionadoIdLocal }?.nombre
+                            ?: "Sin asignar",
                         onValueChange = {},
                         readOnly = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                        label = { Text("Especialidad") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedEspecialidad)
-                        },
-                        singleLine = true
+                        label = { Text("Alumno Asignado") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedAlumno) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
 
                     ExposedDropdownMenu(
-                        expanded = expandedEspecialidad,
-                        onDismissRequest = { expandedEspecialidad = false }
-                    ) {
-                        especialidades.forEach { especialidadItem ->
-                            DropdownMenuItem(
-                                text = { Text(especialidadItem) },
-                                onClick = {
-                                    especialidad = especialidadItem
-                                    expandedEspecialidad = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Teléfono y Email en fila
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = telefono,
-                        onValueChange = { telefono = it },
-                        label = { Text("Teléfono") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // SECCIÓN 2: Información adicional
-                Text(
-                    "Información Adicional",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // Descripción
-                OutlinedTextField(
-                    value = descripcion,
-                    onValueChange = { descripcion = it },
-                    label = { Text("Descripción breve") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = false,
-                    maxLines = 2,
-                    placeholder = { Text("Ej: Especialista en...") }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Disponibilidad
-                OutlinedTextField(
-                    value = disponibilidad,
-                    onValueChange = { disponibilidad = it },
-                    label = { Text("Disponibilidad") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text("Ej: Lunes a Viernes 8:00-18:00") }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 🔥 DROPDOWN DE ALUMNO - ¡MANTENIDO!
-                if (profesorExistente != null) {
-                    Text(
-                        "Asignación de Alumno",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    ExposedDropdownMenuBox(
                         expanded = expandedAlumno,
-                        onExpandedChange = {
-                            if (alumnosDisponibles.isNotEmpty()) {
-                                expandedAlumno = it
-                            }
-                        }
+                        onDismissRequest = { expandedAlumno = false }
                     ) {
-                        OutlinedTextField(
-                            // Busca el alumno por su ID (String)
-                            value = alumnosDisponibles.find { it.id == alumnoSeleccionado }?.nombre
-                                ?: "Sin asignar",
-                            onValueChange = {},
-                            readOnly = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                            label = { Text("Alumno asignado") },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedAlumno)
-                            },
-                            enabled = alumnosDisponibles.isNotEmpty(),
-                            singleLine = true
+                        DropdownMenuItem(
+                            text = { Text("Sin asignar") },
+                            onClick = {
+                                alumnoSeleccionadoIdLocal = null
+                                expandedAlumno = false
+                            }
                         )
-
-                        ExposedDropdownMenu(
-                            expanded = expandedAlumno,
-                            onDismissRequest = { expandedAlumno = false }
-                        ) {
+                        alumnosDisponibles.forEach { alumno ->
                             DropdownMenuItem(
-                                text = { Text("Sin asignar") },
+                                text = { Text(alumno.nombre) },
                                 onClick = {
-                                    alumnoSeleccionado = null
+                                    alumnoSeleccionadoIdLocal = alumno.localId
                                     expandedAlumno = false
                                 }
                             )
-                            alumnosDisponibles.forEach { alumno ->
-                                DropdownMenuItem(
-                                    text = { Text(alumno.nombre) },
-                                    onClick = {
-                                        // Asigna la ID de Firebase (String)
-                                        alumnoSeleccionado = alumno.id
-                                        expandedAlumno = false
-                                    }
-                                )
-                            }
                         }
                     }
-
-                    // Mensaje informativo
-                    if (alumnosDisponibles.isEmpty()) {
-                        Text(
-                            "No hay alumnos disponibles para asignar",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    } else {
-                        Text(
-                            "${alumnosDisponibles.size} alumnos disponibles - Toca para seleccionar",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
 
-            // BOTONES
-            Surface(
-                tonalElevation = 8.dp,
+                Spacer(Modifier.height(16.dp))
+            }
+            // ----------------------------------------------------------------------
+
+
+            // BOTÓN DE GUARDAR
+            Button(
+                onClick = {
+                    val profesorFinal = ProfesorEntity(
+                        id = profesorExistente?.id ?: 0,
+                        // ✅ CLAVE: Mantenemos el firebaseId existente al editar (o null si es nuevo)
+                        firebaseId = profesorExistente?.firebaseId,
+                        nombre = nombre.text,
+                        especialidad = especialidad,
+                        telefono = telefono.text,
+                        email = email.text,
+                        descripcion = descripcion.text,
+                        disponibilidad = disponibilidad.text
+                    )
+                    // Llamamos a la función de guardar con el profesor y el ID local del alumno
+                    onGuardar(profesorFinal, alumnoSeleccionadoIdLocal)
+                    scope.launch { sheetState.hide() }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(
-                        onClick = {
-                            scope.launch { sheetState.hide() }
-                            onDismiss()
-                        }
-                    ) {
-                        Text("Cancelar")
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = {
-                            val profesorFinal = ProfesorEntity(
-                                // 2. CORRECCIÓN: Se revierte a Int, usando 0 como fallback porque ProfesorEntity.id es Int
-                                id = profesorExistente?.id ?: 0,
-                                nombre = nombre.text,
-                                especialidad = especialidad,
-                                telefono = telefono.text,
-                                email = email.text,
-                                descripcion = descripcion.text,
-                                disponibilidad = disponibilidad.text
-                            )
-                            // El segundo parámetro es String?
-                            onGuardar(profesorFinal, alumnoSeleccionado)
-                            scope.launch { sheetState.hide() }
-                        }
-                    ) {
-                        Text(if (profesorExistente == null) "Guardar" else "Actualizar")
-                    }
-                }
+                Text(if (profesorExistente == null) "Guardar Profesor" else "Actualizar Profesor")
             }
+
+            Spacer(Modifier.height(60.dp))
         }
     }
 }

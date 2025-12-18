@@ -9,8 +9,9 @@ import androidx.room.TypeConverters
         AlumnoEntity::class,
         SesionEntity::class,
         SesionAgendaEntity::class,
-         ProfesorEntity::class],
-    version = 8,
+         ProfesorEntity::class,
+         TacticaEntity::class],
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -19,4 +20,5 @@ abstract class CoachTrackDatabase : RoomDatabase() {
     abstract fun sesionDao(): SesionDao
     abstract fun sesionAgendaDao(): SesionAgendaDao
     abstract fun profesorDao(): ProfesorDao
+    abstract fun tacticaDao(): TacticaDao
 }

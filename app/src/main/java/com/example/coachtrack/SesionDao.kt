@@ -12,7 +12,7 @@ interface SesionDao {
     fun getAll(): Flow<List<SesionEntity>>
 
     @Query("SELECT * FROM sesiones WHERE alumnoId = :alumnoId ORDER BY fecha DESC")
-    fun getSesionesPorAlumno(alumnoId: Int): Flow<List<SesionEntity>>
+    fun getSesionesPorAlumno(alumnoId: Long): Flow<List<SesionEntity>> // 💡 CORREGIDO: De Int a Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(sesion: SesionEntity)

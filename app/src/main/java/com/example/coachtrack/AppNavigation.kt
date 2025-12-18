@@ -5,16 +5,18 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.*
-import androidx.lifecycle.viewmodel.compose.viewModel
-
+import androidx.compose.ui.Modifier
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AppNavigation(
-    onLogout: () -> Unit  // 👈 nuevo parámetro
+    carteraViewModel: CarteraViewModel,
+    onLogout: () -> Unit
 ) {
-    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
+    // currentScreen puede ser un objeto (e.g., AppScreen.Cartera) o una data class con datos (e.g., AppScreen.FichaAlumno(123L))
+    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Principal) }
 
     AnimatedContent(
         targetState = currentScreen,
@@ -35,9 +37,8 @@ fun AppNavigation(
                 onPlanificarClick = { currentScreen = AppScreen.Planificacion },
                 onGestionClick = { currentScreen = AppScreen.Gestion },
                 onVideoAnalisisClick = { currentScreen = AppScreen.VideoAnalisis },
-                userId = "demo_user",   // luego lo cambiamos por el uid real
+                userId = "demo_user",
                 onCerrarSesion = {
-                    // Ahora el botón "Cerrar sesión" realmente cierra la sesión
                     onLogout()
                 }
             )
@@ -46,12 +47,11 @@ fun AppNavigation(
                 onGestionAlumnosClick = { currentScreen = AppScreen.Cartera },
                 onHistorialAlumnosClick = { currentScreen = AppScreen.Historial },
                 onGestionProfesoresClick = { currentScreen = AppScreen.GestionProfesores },
-                onPagosClick = {currentScreen=AppScreen.Pagos }
+                onPagosClick = { currentScreen = AppScreen.Pagos }
             )
 
-            // ✅ NUEVO CASO DE NAVEGACIÓN AÑADIDO
             AppScreen.GestionProfesores -> GestionProfesoresScreen(
-                onVolverClick = { currentScreen = AppScreen.Gestion } // Vuelve al menú de Gestión
+                onVolverClick = { currentScreen = AppScreen.Gestion }
             )
 
             AppScreen.Planificacion -> PlanificacionScreen(
@@ -68,14 +68,32 @@ fun AppNavigation(
 
             AppScreen.Cartera -> CarteraScreen(
                 onVolver = { currentScreen = AppScreen.Gestion },
-                onAbrirFichaAlumno = { /* futuro */ }
+                // ✅ CORRECCIÓN CLAVE 1: Usa AppScreen.FichaAlumno
+                onAbrirFichaAlumno = { alumnoEntity ->
+                    currentScreen = AppScreen.FichaAlumno(alumnoEntity.localId)
+                }
             )
+
             AppScreen.Pagos -> PagosScreen(
-                //viewModel= androidx.lifecycle.compose.viewModel(),
                 onVolver = { currentScreen = AppScreen.Gestion }
             )
 
+            // 🚀 CASO DE NAVEGACIÓN PARA LA FICHA
+            // ✅ CORRECCIÓN CLAVE 2: Usa 'is AppScreen.FichaAlumno' para reconocer el tipo y acceder a 'localId'
+            is AppScreen.FichaAlumno -> FichaAlumnoScreen(
+                localId = screen.localId, // <- Ahora resuelve correctamente
+                onVolver = {
+                    currentScreen = AppScreen.Cartera // Volver a la Cartera
+                },
+                onNuevaSesionClick = { /* futuro: ir a la pantalla de sesión */ }
+            )
 
+            // Manejo de otros estados que no necesitan argumentos
+            AppScreen.Video -> Box {}
+            AppScreen.Camara -> Box {}
+            AppScreen.Inicio -> Box {}
+
+            // Caso por defecto
             else -> CoachTrackSplashScreen(
                 onSplashFinished = { currentScreen = AppScreen.Principal }
             )

@@ -1,6 +1,5 @@
 package com.example.coachtrack
 
-import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,24 +15,36 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.jvm.java
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorialScreen(onVolverClick: () -> Unit) {
 
-    //------------BACKHANDLER PARA ESTA PANTALLA--------------------
-    BackHandler {
-        onVolverClick()
-    }
+    BackHandler { onVolverClick() }
 
     val context = LocalContext.current
+    val app = context.applicationContext as CoachTrackApplication
+
     val sesionViewModel: SesionViewModel = viewModel(
-        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
-            .getInstance(context.applicationContext as Application)
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(SesionViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return SesionViewModel(
+                        application = app,
+                        repository = app.container.sesionRepository
+                    ) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
     )
 
-    val sesiones by sesionViewModel.sesiones.collectAsState()
+    val sesiones by sesionViewModel.sesionesGenerales.collectAsState()
 
     Scaffold(
         topBar = {
@@ -48,7 +59,6 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
         }
     ) { pv ->
         if (sesiones.isEmpty()) {
-            // 🔸 Caso sin sesiones
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -64,16 +74,11 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                 )
             }
         } else {
-            // 🔹 Agrupar sesiones por nombre de alumno
             val sesionesAgrupadas = sesiones.groupBy { it.alumnoNombre }
 
-            // Paleta de colores suaves alternados
             val coloresGrupo = listOf(
-                Color(0xFFE3F2FD), // Azul claro
-                Color(0xFFE8F5E9), // Verde claro
-                Color(0xFFFFF3E0), // Naranja claro
-                Color(0xFFF3E5F5), // Violeta claro
-                Color(0xFFFFEBEE)  // Rosa claro
+                Color(0xFFE3F2FD), Color(0xFFE8F5E9), Color(0xFFFFF3E0),
+                Color(0xFFF3E5F5), Color(0xFFFFEBEE)
             )
 
             LazyColumn(
@@ -83,11 +88,12 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                sesionesAgrupadas.entries.forEachIndexed { index, (alumno, listaSesiones) ->
+                sesionesAgrupadas.entries.toList().forEachIndexed { index, entry ->
+                    val alumno = entry.key
+                    val listaSesiones = entry.value
                     val colorFondo = coloresGrupo[index % coloresGrupo.size]
 
-                    item {
-                        // 🔹 Encabezado del alumno con fondo suave
+                    item(key = "header_$alumno") {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -95,7 +101,7 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                                 .padding(12.dp)
                         ) {
                             Text(
-                                text = "👤 $alumno",
+                                text = "Alumno: $alumno",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -107,8 +113,10 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                         }
                     }
 
-                    // 🔹 Sesiones del alumno (ordenadas por fecha descendente)
-                    items(listaSesiones.sortedByDescending { it.fecha }, key = { it.id }) { sesion ->
+                    items(
+                        items = listaSesiones.sortedByDescending { it.fecha },
+                        key = { sesion -> sesion.id }
+                    ) { sesion ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -144,9 +152,9 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     text = if (sesion.completada)
-                                        "Estado: Completada ✅"
+                                        "Estado: Completada"
                                     else
-                                        "Estado: Pendiente ⏳",
+                                        "Estado: Pendiente",
                                     color = if (sesion.completada)
                                         Color(0xFF2E7D32)
                                     else

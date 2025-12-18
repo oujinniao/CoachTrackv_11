@@ -1,10 +1,13 @@
 package com.example.coachtrack
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -23,29 +26,50 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FichaAlumnoScreen(
-    alumnoInicial: Alumnos,
+    localId: Long,
     onVolver: () -> Unit,
     onNuevaSesionClick: (Alumnos) -> Unit,
     viewModel: FichaAlumnoViewModel = viewModel()
 ) {
-    // 🔹 Actualiza datos personales al abrir
-    LaunchedEffect(alumnoInicial) {
-        viewModel.actualizarDatosPersonales(alumnoInicial.datosPersonales)
+    // ---- Diálogos ----
+    var showNuevaSesionDialog by rememberSaveable { mutableStateOf(false) }
+    var showNuevaTacticaDialog by rememberSaveable { mutableStateOf(false) }
+
+    // ---- Carga ----
+    LaunchedEffect(localId) {
+        if (localId != 0L) viewModel.cargarAlumno(localId)
     }
 
-    // 🔹 Estado observado desde el ViewModel
-    val alumnoState by viewModel.alumno.observeAsState(alumnoInicial)
+    // LiveData es Alumnos? -> en UI lo tratamos como nullable y damos fallback seguro
+    val alumnoNullable by viewModel.alumno.observeAsState(initial = null)
 
-    // 🔹 Mantenemos la ficha estable ante recomposición o pérdida de foco
-    var alumno by rememberSaveable { mutableStateOf(alumnoState) }
+    val alumnoState: Alumnos = alumnoNullable ?: Alumnos(
+        localId = localId,
+        nombre = "Cargando..."
+    )
+
+    // Si me pasaron un ID real, pero todavía no cargó el alumno, muestro loader
+    if (localId != 0L && alumnoNullable == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     var selectedTab by rememberSaveable { mutableStateOf(0) }
-    var notas by rememberSaveable { mutableStateOf(alumno.notasEntrenador) }
-    var editandoNotas by rememberSaveable { mutableStateOf(false) }
+
+    // Observar las listas (asumiendo que existen como StateFlow en tus VMs)
+    val sesiones: List<SesionEntity> by viewModel.sesionViewModel.sesionesDelAlumno.collectAsState(
+        initial = emptyList()
+    )
+    val tacticas: List<TacticaEntity> by viewModel.tacticaViewModel.tacticasDelAlumno.collectAsState(
+        initial = emptyList()
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ficha de ${alumno.nombre}") },
+                title = { Text("Ficha de ${alumnoState.nombre}") },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -55,10 +79,16 @@ fun FichaAlumnoScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { onNuevaSesionClick(alumno) },
+                onClick = {
+                    if (alumnoState.localId != 0L) {
+                        showNuevaSesionDialog = true
+                        // si quieres seguir usando el callback externo:
+                        // onNuevaSesionClick(alumnoState)
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Edit, contentDescription = "Nueva sesión")
+                Icon(Icons.Default.Add, contentDescription = "Nueva sesión")
             }
         }
     ) { padding ->
@@ -69,75 +99,15 @@ fun FichaAlumnoScreen(
                 .padding(padding)
         ) {
             // ---------------- ENCABEZADO ----------------
-            Card(
+            Text(
+                text = alumnoState.nombre,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(alumno.nivelActual, fontWeight = FontWeight.Bold, color = Color.Gray)
-                    Spacer(Modifier.height(8.dp))
-                    CircularProgressIndicator(
-                        progress = (alumno.progreso / 100f).coerceIn(0f, 1f),
-                        strokeWidth = 8.dp,
-                        modifier = Modifier.size(80.dp)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("${alumno.progreso}% completado", fontSize = 18.sp)
-                    Text("Clases ${alumno.clasesCursadas} / ${alumno.clasesPactadas}")
-
-                    Spacer(Modifier.height(8.dp))
-                    Text("Ajustar clases pactadas:", fontWeight = FontWeight.Bold)
-
-                    var clasesPactadas by rememberSaveable { mutableStateOf(alumno.clasesPactadas) }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        IconButton(onClick = { if (clasesPactadas > 0) clasesPactadas-- }) {
-                            Icon(Icons.Default.Remove, contentDescription = "Restar")
-                        }
-                        Text(
-                            text = "$clasesPactadas",
-                            fontSize = 20.sp,
-                            modifier = Modifier.width(40.dp),
-                            textAlign = TextAlign.Center
-                        )
-                        IconButton(onClick = { clasesPactadas++ }) {
-                            Icon(Icons.Default.Add, contentDescription = "Sumar")
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = {
-                        alumno = alumno.copy(clasesPactadas = clasesPactadas)
-                        viewModel.actualizarClasesPactadas(clasesPactadas)
-                        viewModel.guardarAlumno()
-                    }) {
-                        Icon(Icons.Default.Save, contentDescription = "Guardar pactadas")
-                        Spacer(Modifier.width(4.dp))
-                        Text("Guardar Pactadas")
-                    }
-
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "Estado de pago: ${alumno.estadoPago}",
-                        color = when (alumno.estadoPago) {
-                            EstadoPago.ADELANTADO -> Color(0xFF2E7D32)
-                            EstadoPago.PENDIENTE -> Color(0xFFFFA000)
-                            EstadoPago.DEUDA -> Color(0xFFC62828)
-                        },
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
 
             // ---------------- TABS ----------------
             val tabs = listOf("Resumen", "Sesiones", "Tácticas")
@@ -153,87 +123,284 @@ fun FichaAlumnoScreen(
 
             when (selectedTab) {
                 0 -> {
-                    // ---------------- TAB RESUMEN ----------------
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    TabResumen(
+                        alumno = alumnoState,
+                        onGuardarNotas = { nuevasNotas ->
+                            viewModel.actualizarNotas(alumnoState.localId, nuevasNotas)
+                        },
+                        onModificarClases = { nuevasClases ->
+                            viewModel.actualizarClasesCursadas(alumnoState.localId, nuevasClases)
+                        }
+                    )
+                }
+
+                1 -> {
+                    TabSesiones(sesiones = sesiones)
+                }
+
+                2 -> {
+                    TabTacticas(
+                        tacticas = tacticas,
+                        onNuevaTacticaClick = { showNuevaTacticaDialog = true }
+                    )
+                }
+            }
+        }
+    }
+
+    // ---------------- DIÁLOGOS ----------------
+    if (showNuevaSesionDialog && alumnoState.localId != 0L) {
+        DialogNuevaSesion(
+            alumnoId = alumnoState.localId,
+            alumnoNombre = alumnoState.nombre,
+            sesionViewModel = viewModel.sesionViewModel,
+            onDismiss = { showNuevaSesionDialog = false }
+        )
+    }
+
+    if (showNuevaTacticaDialog && alumnoState.localId != 0L) {
+        DialogNuevaTactica(
+            alumnoNombre = alumnoState.nombre,
+            tacticaViewModel = viewModel.tacticaViewModel,
+            onDismiss = { showNuevaTacticaDialog = false }
+        )
+    }
+}
+
+// ----------------------------------------------------
+// COMPONENTES MODULARIZADOS
+// ----------------------------------------------------
+
+@Composable
+fun TabResumen(
+    alumno: Alumnos,
+    onGuardarNotas: (String) -> Unit,
+    onModificarClases: (Int) -> Unit
+) {
+    // Estado local para notas (se reinicia cuando cambia el alumno)
+    var notas by rememberSaveable(alumno.localId) { mutableStateOf(alumno.notasEntrenador) }
+    var editandoNotas by rememberSaveable(alumno.localId) { mutableStateOf(false) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Nivel Actual: ${alumno.nivelActual}", style = MaterialTheme.typography.titleMedium)
+                    Text("Objetivo: ${alumno.objetivo ?: "—"}", style = MaterialTheme.typography.bodyMedium)
+                    Divider(Modifier.padding(vertical = 8.dp))
+
+                    Text("Teléfono: ${alumno.datosPersonales.telefono}", style = MaterialTheme.typography.bodySmall)
+                    Text("Dirección: ${alumno.datosPersonales.direccion}", style = MaterialTheme.typography.bodySmall)
+                    Text("Estado de Pago: ${alumno.estadoPago.name}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Clases Pactadas: ${alumno.clasesPactadas}", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Edad: ${alumno.datosPersonales.edad}")
-                        Text("Altura: ${alumno.datosPersonales.altura} cm")
-                        Text("Peso: ${alumno.datosPersonales.peso} kg")
-                        Text("Dirección: ${alumno.datosPersonales.direccion ?: ""}")
-                        Text("Teléfono: ${alumno.datosPersonales.telefono ?: ""}")
-                        Text("Email: ${alumno.datosPersonales.email ?: ""}")
+                        Text("Clases Cursadas:", style = MaterialTheme.typography.titleLarge)
 
-                        Spacer(Modifier.height(12.dp))
-                        Text("Nivel actual:", fontWeight = FontWeight.Bold)
-
-                        var nivelActual by rememberSaveable { mutableStateOf(alumno.nivelActual) }
-
-                        NivelActualSelector(
-                            nivelActual = nivelActual,
-                            onNivelChange = { nuevoNivel ->
-                                nivelActual = nuevoNivel
-                                alumno = alumno.copy(nivelActual = nuevoNivel)
-                                viewModel.guardarAlumno()
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    if (alumno.clasesCursadas > 0) {
+                                        onModificarClases(alumno.clasesCursadas - 1)
+                                    }
+                                },
+                                enabled = alumno.clasesCursadas > 0
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Restar Clase")
                             }
-                        )
 
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Objetivo: ${alumno.objetivo ?: "Sin objetivo definido"}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(Modifier.height(12.dp))
-
-                        // --- Notas del entrenador ---
-                        Text("Notas del entrenador:", fontWeight = FontWeight.Bold)
-                        if (editandoNotas) {
-                            OutlinedTextField(
-                                value = notas,
-                                onValueChange = { notas = it },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(120.dp)
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Button(onClick = {
-                                alumno = alumno.copy(notasEntrenador = notas)
-                                viewModel.guardarAlumno()
-                                editandoNotas = false
-                            }) {
-                                Icon(Icons.Default.Save, contentDescription = "Guardar")
-                                Spacer(Modifier.width(4.dp))
-                                Text("Guardar Notas")
-                            }
-                        } else {
                             Text(
-                                notas.ifEmpty { "Sin notas registradas." },
-                                style = MaterialTheme.typography.bodyMedium
+                                "${alumno.clasesCursadas}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
-                            Spacer(Modifier.height(8.dp))
-                            Button(onClick = { editandoNotas = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Editar")
-                                Spacer(Modifier.width(4.dp))
-                                Text("Editar Notas")
+
+                            IconButton(
+                                onClick = { onModificarClases(alumno.clasesCursadas + 1) }
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Sumar Clase")
                             }
                         }
                     }
                 }
+            }
+        }
 
-                1 -> {
-                    // ---------------- TAB SESIONES ----------------
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No hay sesiones registradas todavía.")
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 80.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Notas del Entrenador", style = MaterialTheme.typography.titleMedium)
+
+                        IconButton(
+                            onClick = {
+                                editandoNotas = !editandoNotas
+                                // Si estoy saliendo del modo edición -> guardo
+                                if (!editandoNotas) onGuardarNotas(notas)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (editandoNotas) Icons.Default.Save else Icons.Default.Edit,
+                                contentDescription = if (editandoNotas) "Guardar Notas" else "Editar Notas"
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    if (editandoNotas) {
+                        OutlinedTextField(
+                            value = notas,
+                            onValueChange = { notas = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp),
+                            label = { Text("Escribe tus notas aquí") }
+                        )
+                    } else {
+                        Text(
+                            text = notas.ifEmpty { "No hay notas aún." },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (notas.isEmpty()) Color.Gray else Color.Unspecified
+                        )
                     }
                 }
+            }
+        }
+    }
+}
 
-                2 -> {
-                    // ---------------- TAB TÁCTICAS ----------------
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No hay tácticas registradas.")
+@Composable
+fun TabSesiones(sesiones: List<SesionEntity>) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (sesiones.isEmpty()) {
+            item {
+                Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay sesiones registradas todavía.", color = Color.Gray)
+                }
+            }
+        } else {
+            item {
+                Text(
+                    "Historial de Sesiones (${sesiones.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            items(sesiones, key = { it.id }) { sesion ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.padding(12.dp)) {
+                        Icon(Icons.Default.List, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(sesion.fecha, fontWeight = FontWeight.Bold)
+                            Text("Duración: ${sesion.duracion} min", style = MaterialTheme.typography.bodySmall)
+                            Text("Ejercicios: ${sesion.ejercicios}", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TabTacticas(
+    tacticas: List<TacticaEntity>,
+    onNuevaTacticaClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Button(
+            onClick = onNuevaTacticaClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Nueva Táctica")
+            Spacer(Modifier.width(8.dp))
+            Text("Añadir Nueva Táctica")
+        }
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            if (tacticas.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No hay tácticas registradas todavía.", color = Color.Gray)
+                    }
+                }
+            } else {
+                item {
+                    Text(
+                        "Tácticas Registradas (${tacticas.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                items(tacticas, key = { it.localId }) { tactica ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                tactica.titulo,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text("Nivel: ${tactica.nivel}", style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(4.dp))
+                            Text(tactica.descripcion, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
             }

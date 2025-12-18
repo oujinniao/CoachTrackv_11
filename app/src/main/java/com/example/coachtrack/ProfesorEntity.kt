@@ -5,7 +5,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "profesores")
 data class ProfesorEntity(
-    @PrimaryKey(autoGenerate = true) val id:  Int=0,
+    @PrimaryKey(autoGenerate = true)
+    val id:  Long=0L,
+    val firebaseId:String?=null,
     val nombre: String,
     val especialidad: String,
     val telefono: String,

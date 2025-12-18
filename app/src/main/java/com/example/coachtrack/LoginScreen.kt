@@ -6,17 +6,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
+    // CAMBIO CRÍTICO: Recibe el ViewModel para ejecutar la acción PRO de sincronización
+    carteraViewModel: CarteraViewModel,
     onLoginSuccess: () -> Unit,
     onRegisterClick: () -> Unit
 ) {
@@ -90,6 +93,11 @@ fun LoginScreen(
                         .addOnCompleteListener { task ->
                             isLoading = false
                             if (task.isSuccessful) {
+                                // 1. LLAMADA CRÍTICA: Iniciar la sincronización (Recuperación Cloud -> Room)
+                                // Esto garantiza la continuidad operacional (PRO Feature).
+                                carteraViewModel.iniciarSincronizacionInicial()
+
+                                // 2. Navegar
                                 onLoginSuccess()
                             } else {
                                 errorMessage = task.exception?.localizedMessage
@@ -119,7 +127,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // MODO DEMO ANÓNIMO (para no perder lo que ya funcionaba)
+            // MODO DEMO ANÓNIMO (Generalmente FREE o limitado)
             Text("¿Solo quieres probar la app?", style = MaterialTheme.typography.bodySmall)
 
             OutlinedButton(
@@ -130,6 +138,9 @@ fun LoginScreen(
                         .addOnCompleteListener { task ->
                             isLoading = false
                             if (task.isSuccessful) {
+                                // Llamar a sincronización: el ViewModel verificará si este usuario (anónimo)
+                                // es PRO o FREE y ejecutará o bloqueará la acción.
+                                carteraViewModel.iniciarSincronizacionInicial()
                                 onLoginSuccess()
                             } else {
                                 errorMessage = task.exception?.localizedMessage

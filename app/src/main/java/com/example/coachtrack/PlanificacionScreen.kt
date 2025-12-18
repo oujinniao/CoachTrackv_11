@@ -2,7 +2,6 @@ package com.example.coachtrack
 
 import androidx.activity.compose.BackHandler
 import android.app.Application
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,27 +22,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.collections.filter
-import kotlin.jvm.java
 
-// -------------------- FACTORY UNIFICADO --------------------
-class AppViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        @Suppress("UNCHECKED_CAST")
-        return when {
-            modelClass.isAssignableFrom(CarteraViewModel::class.java) ->
-                CarteraViewModel() as T
+// -------------------- ELIMINACIÓN DE FACTORY SIMPLE --------------------
+// ❌ Se elimina la AppViewModelFactory simple porque no maneja la inyección de SesionRepository
+// en SesionViewModel. Usaremos la factoría estándar de AndroidViewModel.
 
-            modelClass.isAssignableFrom(SesionViewModel::class.java) ->
-                SesionViewModel(application) as T
-
-            else -> throw IllegalArgumentException("Unknown ViewModel class")
-        }
-    }
+/**
+ * Función auxiliar para generar un ID de sesión.
+ * 🎯 CORRECCIÓN: Ahora usa el SesionViewModel para obtener la lista, ya que el ID debe ser LONG.
+ */
+private suspend fun generarNuevoSessionId(sesionViewModel: SesionViewModel): Long {
+    // 💡 Usamos .first() para obtener el valor actual del StateFlow una sola vez.
+    val sesionesActuales = sesionViewModel.sesionesGenerales.first()
+    return (sesionesActuales.maxOfOrNull { it.id } ?: 0L) + 1L
 }
 
 // -------------------- PANTALLA DE PLANIFICACIÓN --------------------
@@ -51,17 +46,32 @@ class AppViewModelFactory(private val application: Application) : ViewModelProvi
 @Composable
 fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
-    //***********BACKHANDLER PARA ESTA PANTALLA*********************************
     BackHandler {
         onVolverClick()
     }
 
-
     val context = LocalContext.current
-    val appFactory = remember { AppViewModelFactory(context.applicationContext as Application) }
+    val application = context.applicationContext as Application
 
-    val carteraViewModel: CarteraViewModel = viewModel(factory = appFactory)
-    val sesionViewModel: SesionViewModel = viewModel(factory = appFactory)
+    // 🎯 INYECCIÓN CORREGIDA: Usamos factoría estándar para CarteraViewModel
+    val carteraViewModel: CarteraViewModel = viewModel()
+
+    // 🎯 INYECCIÓN CORREGIDA: Inicializamos SesionRepository para inyectarlo en SesionViewModel
+    // Asumimos que SesionRepository(context) sigue siendo válido.
+    val sesionRepository = remember { SesionRepository(application.applicationContext) }
+
+    // 🎯 INYECCIÓN CORREGIDA: Pasamos SesionRepository al constructor
+    val sesionViewModel: SesionViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                if (modelClass.isAssignableFrom(SesionViewModel::class.java)) {
+                    return SesionViewModel(application, sesionRepository) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+    )
 
     // Obtenemos alumnos reales desde Room
     val alumnosRoom by carteraViewModel.alumnos.collectAsState(initial = emptyList())
@@ -69,13 +79,14 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
     // Convertimos AlumnoEntity → modelo Alumnos
     val alumnos: List<Alumnos> = alumnosRoom.map { entity ->
         Alumnos(
-            id = entity.id.toString(),
+            // 🎯 CORRECCIÓN: Usamos el localId de tipo Long (convertido a String para el modelo Alumnos)
+            localId=entity.localId,
             nombre = entity.nombre,
             nivelActual = entity.nivelActual,
             objetivo = entity.objetivo,
             clasesPactadas = entity.clasesPactadas,
             clasesCursadas = entity.clasesCursadas,
-            estadoPago = EstadoPago.valueOf(entity.estadoPago),     // ✅ CORREGIDO
+            estadoPago = EstadoPago.valueOf(entity.estadoPago),
             datosPersonales = DatosPersonales(
                 edad = entity.edad,
                 telefono = entity.telefono,
@@ -137,6 +148,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                 // -----------------------------------
                 if (alumnoSeleccionado == null) {
 
+                    // ... (Cuerpo de selección de alumno se mantiene igual)
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
@@ -273,8 +285,11 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                                 scope.launch {
                                     alumnoSeleccionado?.let { alumno ->
 
+                                        // 🎯 CORRECCIÓN: Usamos la función auxiliar corregida.
+                                        val newSessionId = generarNuevoSessionId(sesionViewModel)
+
                                         val sesion = SesionDeClase(
-                                            sessionId = generarNuevoSessionId(sesionViewModel.sesiones.value),
+                                            sessionId = newSessionId, // Usamos el ID de tipo Long
                                             fechaCreacion = java.time.LocalDateTime.now()
                                                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                                             alumnoNombre = alumno.nombre,
@@ -282,12 +297,14 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                                             ejercicios = sesionViewModel.sesionActual.toMutableList()
                                         )
 
+                                        // 🎯 CORRECCIÓN: Convertimos alumno.id (String) a Long para la Entidad.
                                         val entidad = sesion.toEntity(
-                                            alumnoId = alumno.id.toInt(),
+                                            alumnoId = alumno.localId, // CORREGIDO: toLong()
                                             alumnoNombre = alumno.nombre
                                         )
 
-                                        sesionViewModel.agregarSesion(entidad)
+                                        // 💡 Usamos la función de SesionViewModel que incrementa el contador de clases.
+                                        sesionViewModel.guardarNuevaSesion(entidad)
 
                                         snackbarMessage = "✅ Sesión guardada para ${alumno.nombre}"
                                         showSnackbar = true

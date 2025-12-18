@@ -11,7 +11,7 @@ import com.google.firebase.firestore.ServerTimestamp
 data class AlumnoCloud(
     // Firestore asignará automáticamente un ID al crear el documento.
     @DocumentId
-    val id: String = "",
+    val id: String = "",    //este es el ID de Firestore
 
     // --- CAMPOS DE TU ALUMNO ACTUAL (de AlumnoEntity) ---
     val nombre: String = "",

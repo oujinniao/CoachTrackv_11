@@ -7,13 +7,13 @@ import androidx.room.ColumnInfo
 @Entity(tableName = "sesiones")
 data class SesionEntity(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+    val id: Long = 0,
 
     @ColumnInfo(name = "alumnoId")
-    val alumnoId: Int,
+    val alumnoId: Long, // 💡 CORREGIDO: De Int a Long
 
     @ColumnInfo(name = "alumnoNombre")
-    val alumnoNombre: String,   // ✅ nuevo campo: nombre del alumno
+    val alumnoNombre: String,   // ✅ campo: nombre del alumno
 
     @ColumnInfo(name = "fecha")
     val fecha: String,

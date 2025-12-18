@@ -50,15 +50,26 @@ fun GestionProfesoresScreen(
 
     GestionProfesoresScreenContent(
         state = state,
-        // 🎯 CORRECCIÓN: Pasar alumnosDisponibles al contenido
         alumnosDisponibles = alumnosDisponibles,
         onVolverClick = onVolverClick,
-        onGuardarProfesor = viewModel::agregarOActualizarProfesor,
-        onGuardarConAsignacion = viewModel::agregarOActualizarProfesorConAsignacion,
-        onEliminarProfesor = viewModel::eliminarProfesor,
-        onCountAssignedAlumnos = viewModel::countAlumnosAsignados,
-        onAbrirDialogo = viewModel::abrirDialogoAgregar,
-        onCerrarDialogo = viewModel::cerrarDialogoAgregar,
+        onGuardarProfesor = { profesor ->
+            viewModel.agregarOActualizarProfesor(profesor)
+        },
+        onGuardarConAsignacion = { profesor, alumnoId ->
+            viewModel.agregarOActualizarProfesorConAsignacion(profesor, alumnoId)
+        },
+        onEliminarProfesor = { profesor ->
+            viewModel.eliminarProfesor(profesor)
+        },
+        onCountAssignedAlumnos = { profesorId ->
+            viewModel.countAlumnosAsignados(profesorId)
+        },
+        onAbrirDialogo = { profesor ->
+            viewModel.abrirDialogoAgregar(profesor)
+        },
+        onCerrarDialogo = {
+            viewModel.cerrarDialogoAgregar()
+        },
         showDialog = showDialog,
         profesorAEditar = profesorAEditar
     )
@@ -77,9 +88,9 @@ fun GestionProfesoresScreenContent(
     alumnosDisponibles: List<AlumnoEntity>,
     onVolverClick: () -> Unit,
     onGuardarProfesor: (ProfesorEntity) -> Unit,
-    onGuardarConAsignacion: (ProfesorEntity, String?) -> Unit,
+    onGuardarConAsignacion: (ProfesorEntity, Long?) -> Unit,
     onEliminarProfesor: (ProfesorEntity) -> Unit,
-    onCountAssignedAlumnos: (Int) -> Int,
+    onCountAssignedAlumnos: (Long) -> Int,
     onAbrirDialogo: (ProfesorEntity?) -> Unit,
     onCerrarDialogo: () -> Unit,
     showDialog: Boolean,
@@ -151,7 +162,7 @@ fun GestionProfesoresScreenContent(
                 alumnosDisponibles = alumnosDisponibles,
                 onDismiss = onCerrarDialogo,
                 onGuardar = { profesor, alumnoAsignado ->
-                    if (profesor.id == 0)
+                    if (profesor.id == 0L)
                         onGuardarConAsignacion(profesor, alumnoAsignado)
                     else {
                         onGuardarProfesor(profesor)

@@ -1,7 +1,9 @@
 package com.example.coachtrack
 
 data class Alumnos(
-    val id: String,
+    val localId: Long =0L,
+    val firebaseId: String? =null,
+
     val nombre: String,
     val objetivo: String? = null,
     val clasesPactadas: Int = 0,
@@ -10,9 +12,11 @@ data class Alumnos(
     var notasEntrenador: String = "",
     val fechaInicio: String? = null,
     val sesiones: List<SesionSimple> = emptyList(),
-    val tacticas: List<Tactica> = emptyList(),
+    val tacticas: List<TacticaEntity> = emptyList(),
     val datosPersonales: DatosPersonales = DatosPersonales(),
-    val nivelActual: String = ""
+    val nivelActual: String = "",
+    val profesorFirebaseId:String?=null,
+    val profesorInstructor:Long?=null
 ) {
     val progreso: Int
         get() = if (clasesPactadas > 0)
