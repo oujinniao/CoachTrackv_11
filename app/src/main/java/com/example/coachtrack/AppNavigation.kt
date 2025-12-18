@@ -37,6 +37,7 @@ fun AppNavigation(
                 onPlanificarClick = { currentScreen = AppScreen.Planificacion },
                 onGestionClick = { currentScreen = AppScreen.Gestion },
                 onVideoAnalisisClick = { currentScreen = AppScreen.VideoAnalisis },
+                onDashboardClick = { currentScreen = AppScreen.Dashboard },
                 userId = "demo_user",
                 onCerrarSesion = {
                     onLogout()
@@ -68,8 +69,7 @@ fun AppNavigation(
 
             AppScreen.Cartera -> CarteraScreen(
                 onVolver = { currentScreen = AppScreen.Gestion },
-                // ✅ CORRECCIÓN CLAVE 1: Usa AppScreen.FichaAlumno
-                onAbrirFichaAlumno = { alumnoEntity ->
+               onAbrirFichaAlumno = { alumnoEntity ->
                     currentScreen = AppScreen.FichaAlumno(alumnoEntity.localId)
                 }
             )
@@ -77,9 +77,16 @@ fun AppNavigation(
             AppScreen.Pagos -> PagosScreen(
                 onVolver = { currentScreen = AppScreen.Gestion }
             )
+            AppScreen.Dashboard -> DashboardScreen(
+                onVolverClick = { currentScreen = AppScreen.Principal },
+                onPlanificacionClick = { currentScreen = AppScreen.Planificacion },
+                onCarteraClick = { currentScreen = AppScreen.Cartera },
+                onAbrirFichaAlumno = { alumno ->
+                    currentScreen = AppScreen.FichaAlumno(alumno.localId)
+                },
+                onGestionClick = { currentScreen = AppScreen.Gestion }
+            )
 
-            // 🚀 CASO DE NAVEGACIÓN PARA LA FICHA
-            // ✅ CORRECCIÓN CLAVE 2: Usa 'is AppScreen.FichaAlumno' para reconocer el tipo y acceder a 'localId'
             is AppScreen.FichaAlumno -> FichaAlumnoScreen(
                 localId = screen.localId, // <- Ahora resuelve correctamente
                 onVolver = {

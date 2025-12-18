@@ -1,6 +1,7 @@
 package com.example.coachtrack
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
@@ -12,12 +13,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.coachtrack.BotonFuncionalidad
+import com.example.coachtrack.TopAppBarPrincipal
 
 @Composable
 fun PantallaPrincipal(
     onPlanificarClick: () -> Unit,
     onGestionClick: () -> Unit,
     onVideoAnalisisClick: () -> Unit,
+    onDashboardClick:()-> Unit,
     userId: String,
     onCerrarSesion: (() -> Unit)? = null
 ) {
@@ -39,7 +43,8 @@ fun PantallaPrincipal(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
             //------------------------------------
@@ -113,7 +118,7 @@ fun PantallaPrincipal(
                 onClick = onPlanificarClick
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            //Spacer(modifier = Modifier.height(16.dp))
 
             //------------------------------------
             // BOTÓN GESTIÓN
@@ -124,7 +129,16 @@ fun PantallaPrincipal(
                 onClick = onGestionClick
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            //Spacer(modifier = Modifier.height(16.dp))
+
+            //------------------------------------
+           // BOTÓN DASHBOARD
+           //------------------------------------
+            BotonFuncionalidad(
+                texto = "DASHBOARD",
+                descripcion = "Resumen de alumnos, pagos y clases",
+                onClick = onDashboardClick
+            )
 
             //------------------------------------
             // BOTÓN MARKETING
@@ -135,7 +149,7 @@ fun PantallaPrincipal(
                 onClick = onVideoAnalisisClick
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+           // Spacer(modifier = Modifier.height(40.dp))
 
             //------------------------------------
             // BOTÓN CERRAR SESIÓN
@@ -202,18 +216,28 @@ fun TopAppBarPrincipal() {
 }
 
 @Composable
-fun BotonFuncionalidad(texto: String, descripcion: String, onClick: () -> Unit) {
+fun BotonFuncionalidad(
+    texto: String,
+    descripcion: String,
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp),
+            .height(78.dp),
+        shape = RoundedCornerShape(26.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary
         )
     ) {
-        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(texto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(descripcion, style = MaterialTheme.typography.bodySmall)
         }
