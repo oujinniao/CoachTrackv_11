@@ -33,7 +33,7 @@ fun DashboardScreen(
     )
 
     val state by vm.uiState.collectAsState()
-
+//
     LaunchedEffect(state.total) {
         println("DASHBOARD -> total=${state.total}, filtro=${state.filtro}")
     }
