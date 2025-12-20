@@ -1,55 +1,44 @@
 package com.example.coachtrack
 
+import android.app.Application
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlin.jvm.java
+import kotlin.collections.take
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistorialScreen(onVolverClick: () -> Unit) {
-
-    BackHandler { onVolverClick() }
-
+fun HistorialScreen(
+    onVolverClick: () -> Unit
+) {
     val context = LocalContext.current
-    val app = context.applicationContext as CoachTrackApplication
 
-    val sesionViewModel: SesionViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(SesionViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST")
-                    return SesionViewModel(
-                        application = app,
-                        repository = app.container.sesionRepository
-                    ) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
-            }
-        }
+    val vm: HistorialViewModel = viewModel(
+        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+            .getInstance(context.applicationContext as Application)
     )
 
-    val sesiones by sesionViewModel.sesionesGenerales.collectAsState()
+    val state by vm.uiState.collectAsState()
+
+    BackHandler { onVolverClick() }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Historial de Sesiones") },
+                title = { Text("Historial") },
                 navigationIcon = {
                     IconButton(onClick = onVolverClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -58,113 +47,150 @@ fun HistorialScreen(onVolverClick: () -> Unit) {
             )
         }
     ) { pv ->
-        if (sesiones.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(pv),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("No hay sesiones registradas")
-                Text(
-                    "Las sesiones aparecerán aquí cuando las crees",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-        } else {
-            val sesionesAgrupadas = sesiones.groupBy { it.alumnoNombre }
 
-            val coloresGrupo = listOf(
-                Color(0xFFE3F2FD), Color(0xFFE8F5E9), Color(0xFFFFF3E0),
-                Color(0xFFF3E5F5), Color(0xFFFFEBEE)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pv)
+                .padding(horizontal = 16.dp)
+        ) {
+
+            OutlinedTextField(
+                value = state.query,
+                onValueChange = vm::setQuery,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                label = { Text("Buscar alumno") },
+                singleLine = true
             )
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(pv)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                sesionesAgrupadas.entries.toList().forEachIndexed { index, entry ->
-                    val alumno = entry.key
-                    val listaSesiones = entry.value
-                    val colorFondo = coloresGrupo[index % coloresGrupo.size]
+            Spacer(Modifier.height(12.dp))
 
-                    item(key = "header_$alumno") {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(colorFondo.copy(alpha = 0.7f))
-                                .padding(12.dp)
-                        ) {
-                            Text(
-                                text = "Alumno: $alumno",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Divider(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                thickness = 1.dp,
-                                modifier = Modifier.padding(vertical = 6.dp)
-                            )
-                        }
-                    }
+            Text(
+                text = "Alumnos (${state.alumnosFiltrados.size})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
 
-                    items(
-                        items = listaSesiones.sortedByDescending { it.fecha },
-                        key = { sesion -> sesion.id }
-                    ) { sesion ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = colorFondo.copy(alpha = 0.4f)
-                            )
-                        ) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Fecha: ${sesion.fecha}",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = Color(0xFF333333)
-                                )
-                                Text(
-                                    text = "Duración: ${sesion.duracion} min",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = "Ejercicios: ${sesion.ejercicios}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+            Spacer(Modifier.height(8.dp))
 
-                                if (sesion.notas.isNotBlank()) {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = "Notas: ${sesion.notas}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
-                                    )
-                                }
+            if (state.alumnosFiltrados.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay alumnos que coincidan con la búsqueda.")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(state.alumnosFiltrados, key = { it.localId }) { alumno ->
 
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = if (sesion.completada)
-                                        "Estado: Completada"
-                                    else
-                                        "Estado: Pendiente",
-                                    color = if (sesion.completada)
-                                        Color(0xFF2E7D32)
-                                    else
-                                        Color(0xFFFFA000),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
+                        val seleccionado = state.alumnoSeleccionado?.localId == alumno.localId
+
+                        AlumnoHistorialItem(
+                            alumno = alumno,
+                            seleccionado = seleccionado,
+                            sesiones = if (seleccionado) state.sesionesDelSeleccionado else emptyList(),
+                            onClick = { vm.seleccionarAlumno(alumno.localId) }
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlumnoHistorialItem(
+    alumno: AlumnoEntity,
+    seleccionado: Boolean,
+    sesiones: List<SesionEntity>,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = if (seleccionado)
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        else
+            CardDefaults.cardColors()
+    ) {
+        Column(Modifier.padding(14.dp)) {
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(alumno.nombre, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Nivel: ${alumno.nivelActual} • Objetivo: ${alumno.objetivo}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                AssistChip(
+                    onClick = {},
+                    label = { Text(alumno.estadoPago) }
+                )
+            }
+
+            if (seleccionado) {
+                Spacer(Modifier.height(10.dp))
+                Divider()
+                Spacer(Modifier.height(10.dp))
+
+                Text(
+                    text = "Sesiones (${sesiones.size})",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                if (sesiones.isEmpty()) {
+                    Text(
+                        "Este alumno aún no tiene sesiones registradas.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    // Mostramos máximo 6 para no “reventar” la pantalla
+                    sesiones.take(6).forEach { s ->
+                        SesionRow(s)
+                        Spacer(Modifier.height(6.dp))
+                    }
+
+                    if (sesiones.size > 6) {
+                        Text(
+                            "Mostrando 6 de ${sesiones.size}. (Luego podemos agregar “Ver todas”)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SesionRow(s: SesionEntity) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(Modifier.padding(10.dp)) {
+            Text(s.fecha, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = "Duración: ${s.duracion} min • Ejercicios: ${s.ejercicios}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (s.notas.isNotBlank()) {
+                Text(
+                    text = "Notas: ${s.notas}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

@@ -14,7 +14,8 @@ class AppContainer(applicationContext: Application) {
     private val auth = FirebaseAuth.getInstance()
     private val firestore = Firebase.firestore
 
-    private val database: CoachTrackDatabase by lazy {
+    // ✅ EXPUSE DB PARA VIEWMODELS (HistorialViewModel, DashboardViewModel, etc.)
+    val db: CoachTrackDatabase by lazy {
         Room.databaseBuilder(
             context = applicationContext,
             klass = CoachTrackDatabase::class.java,
@@ -24,10 +25,11 @@ class AppContainer(applicationContext: Application) {
             .build()
     }
 
-    private val alumnoDao by lazy { database.alumnoDao() }
-    private val sesionDao by lazy { database.sesionDao() }
-    private val tacticaDao by lazy { database.tacticaDao() }
-    private val profesorDao by lazy { database.profesorDao() }
+    // DAOs (pueden quedarse privados; el ViewModel accederá a través de db)
+    private val alumnoDao by lazy { db.alumnoDao() }
+    private val sesionDao by lazy { db.sesionDao() }
+    private val tacticaDao by lazy { db.tacticaDao() }
+    private val profesorDao by lazy { db.profesorDao() }
 
     val alumnoRepositoryHibrido: AlumnoRepositoryHibrido by lazy {
         AlumnoRepositoryHibrido(
@@ -46,10 +48,11 @@ class AppContainer(applicationContext: Application) {
             firestore = firestore,
             profesorDao = profesorDao,
             alumnoDao = alumnoDao,
-            db = database
+            db = db
         )
     }
 
     val sesionRepository: SesionRepository by lazy {
-        SesionRepository(applicationContext)     }
+        SesionRepository(applicationContext)
+    }
 }
