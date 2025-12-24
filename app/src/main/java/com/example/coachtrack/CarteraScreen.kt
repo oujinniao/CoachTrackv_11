@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.coachtrack.AlumnoListItem
+import com.example.coachtrack.MAX_ALUMNOS_FREE
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -32,7 +34,7 @@ fun CarteraScreen(
 ) {
     val TAG = "CarteraScreen"
 
-    BackHandler(onBack = onVolver)
+    //BackHandler(onBack = onVolver)
     val auth = Firebase.auth
     var authState by remember { mutableStateOf(auth.currentUser) }
 

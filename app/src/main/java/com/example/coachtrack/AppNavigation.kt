@@ -1,5 +1,6 @@
 package com.example.coachtrack
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
@@ -23,7 +24,14 @@ fun AppNavigation(
     }
 
     fun goBack(fallback: AppScreen = AppScreen.Principal) {
-        currentScreen = if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex) else fallback
+        currentScreen =
+            if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex)
+            else fallback
+    }
+
+    // ✅ Back físico SIEMPRE usa tu stack.
+    BackHandler(enabled = backStack.isNotEmpty()) {
+        goBack()
     }
 
     AnimatedContent(
@@ -37,10 +45,6 @@ fun AppNavigation(
 
         when (screen) {
 
-            AppScreen.Splash -> CoachTrackSplashScreen(
-                onSplashFinished = { currentScreen = AppScreen.Principal }
-            )
-
             AppScreen.Principal -> PantallaPrincipal(
                 onPlanificarClick = { navigate(AppScreen.Planificacion) },
                 onGestionClick = { navigate(AppScreen.Gestion) },
@@ -51,7 +55,7 @@ fun AppNavigation(
             )
 
             AppScreen.Gestion -> GestionMenuScreen(
-                onVolverClick = { goBack(AppScreen.Principal) },
+                onVolverClick = { goBack() },
                 onGestionAlumnosClick = { navigate(AppScreen.Cartera) },
                 onHistorialAlumnosClick = { navigate(AppScreen.Historial) },
                 onGestionProfesoresClick = { navigate(AppScreen.GestionProfesores) },
@@ -59,34 +63,34 @@ fun AppNavigation(
             )
 
             AppScreen.GestionProfesores -> GestionProfesoresScreen(
-                onVolverClick = { goBack(AppScreen.Gestion) }
+                onVolverClick = { goBack() }
             )
 
             AppScreen.Planificacion -> PlanificacionScreen(
-                onVolverClick = { goBack(AppScreen.Principal) }
+                onVolverClick = { goBack() } // ✅ vuelve a Dashboard si venías de Dashboard
             )
 
             AppScreen.Historial -> HistorialScreen(
-                onVolverClick = { goBack(AppScreen.Gestion) }
+                onVolverClick = { goBack() }
             )
 
             AppScreen.VideoAnalisis -> VideoAnalisisScreen(
-                onVolverClick = { goBack(AppScreen.Principal) }
+                onVolverClick = { goBack() }
             )
 
             AppScreen.Cartera -> CarteraScreen(
-                onVolver = { goBack(AppScreen.Gestion) },
-                onAbrirFichaAlumno = { alumnoEntity ->
-                    navigate(AppScreen.FichaAlumno(alumnoEntity.localId))
+                onVolver = { goBack() },
+                onAbrirFichaAlumno = { alumno ->
+                    navigate(AppScreen.FichaAlumno(alumno.localId))
                 }
             )
 
             AppScreen.Pagos -> PagosScreen(
-                onVolver = { goBack(AppScreen.Gestion) }
+                onVolver = { goBack() }
             )
 
             AppScreen.Dashboard -> DashboardScreen(
-                onVolverClick = { goBack(AppScreen.Principal) },
+                onVolverClick = { goBack() },
                 onPlanificacionClick = { navigate(AppScreen.Planificacion) },
                 onCarteraClick = { navigate(AppScreen.Cartera) },
                 onAbrirFichaAlumno = { alumno ->
@@ -97,7 +101,7 @@ fun AppNavigation(
 
             is AppScreen.FichaAlumno -> FichaAlumnoScreen(
                 localId = screen.localId,
-                onVolver = { goBack(AppScreen.Cartera) },
+                onVolver = { goBack() }, // ✅ vuelve a Dashboard o Cartera según desde dónde entraste
                 onNuevaSesionClick = { /* futuro */ }
             )
 

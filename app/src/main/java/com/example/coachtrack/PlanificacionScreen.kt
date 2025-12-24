@@ -1,5 +1,6 @@
 package com.example.coachtrack
 
+import android.R.attr.padding
 import androidx.activity.compose.BackHandler
 import android.app.Application
 import androidx.compose.animation.AnimatedVisibility
@@ -23,18 +24,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.coachtrack.generarNuevoSessionId
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.collections.filter
+import kotlin.jvm.java
 
-// -------------------- ELIMINACIÓN DE FACTORY SIMPLE --------------------
-// ❌ Se elimina la AppViewModelFactory simple porque no maneja la inyección de SesionRepository
-// en SesionViewModel. Usaremos la factoría estándar de AndroidViewModel.
 
-/**
- * Función auxiliar para generar un ID de sesión.
- * 🎯 CORRECCIÓN: Ahora usa el SesionViewModel para obtener la lista, ya que el ID debe ser LONG.
- */
+
 private suspend fun generarNuevoSessionId(sesionViewModel: SesionViewModel): Long {
     // 💡 Usamos .first() para obtener el valor actual del StateFlow una sola vez.
     val sesionesActuales = sesionViewModel.sesionesGenerales.first()
@@ -46,23 +43,16 @@ private suspend fun generarNuevoSessionId(sesionViewModel: SesionViewModel): Lon
 @Composable
 fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
-    BackHandler {
-        onVolverClick()
-    }
+    //BackHandler {  onVolverClick()}
+
+
 
     val context = LocalContext.current
     val application = context.applicationContext as Application
-
-    // 🎯 INYECCIÓN CORREGIDA: Usamos factoría estándar para CarteraViewModel
     val carteraViewModel: CarteraViewModel = viewModel()
-
-    // 🎯 INYECCIÓN CORREGIDA: Inicializamos SesionRepository para inyectarlo en SesionViewModel
-    // Asumimos que SesionRepository(context) sigue siendo válido.
     val sesionRepository = remember { SesionRepository(application.applicationContext) }
-
-    // 🎯 INYECCIÓN CORREGIDA: Pasamos SesionRepository al constructor
     val sesionViewModel: SesionViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+          factory = object : androidx.lifecycle.ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 if (modelClass.isAssignableFrom(SesionViewModel::class.java)) {
@@ -79,7 +69,7 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
     // Convertimos AlumnoEntity → modelo Alumnos
     val alumnos: List<Alumnos> = alumnosRoom.map { entity ->
         Alumnos(
-            // 🎯 CORRECCIÓN: Usamos el localId de tipo Long (convertido a String para el modelo Alumnos)
+
             localId=entity.localId,
             nombre = entity.nombre,
             nivelActual = entity.nivelActual,
@@ -97,13 +87,23 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
     val plantillas = PLANTILLAS_MOCK
     val scope = rememberCoroutineScope()
-
     var alumnoSeleccionado by remember { mutableStateOf<Alumnos?>(null) }
     var query by remember { mutableStateOf("") }
     var plantillaSeleccionada by remember { mutableStateOf<Plantilla?>(null) }
-
     var showSnackbar by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf("") }
+
+    BackHandler(enabled = true) {
+        if (plantillaSeleccionada != null) {
+            plantillaSeleccionada = null
+        } else if (alumnoSeleccionado != null) {
+            alumnoSeleccionado = null
+        } else {
+            onVolverClick()
+        }
+    }
+
+
 
     Scaffold(
         topBar = {
