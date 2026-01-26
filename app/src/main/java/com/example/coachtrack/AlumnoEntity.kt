@@ -6,8 +6,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "alumnos",
-    indices = [Index(value = ["firebaseId"], unique = true)]
-)
+    indices = [
+        Index(value = ["firebaseId"], unique = true),
+        Index(value = ["telefono"], unique = true),])  //bloquea alumnos duplicados
+
 data class AlumnoEntity(
     @PrimaryKey(autoGenerate = true)
     val localId: Long = 0L,

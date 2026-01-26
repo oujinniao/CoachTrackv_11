@@ -10,10 +10,10 @@ data class SesionEntity(
     val id: Long = 0,
 
     @ColumnInfo(name = "alumnoId")
-    val alumnoId: Long, // 💡 CORREGIDO: De Int a Long
+    val alumnoId: Long,
 
     @ColumnInfo(name = "alumnoNombre")
-    val alumnoNombre: String,   // ✅ campo: nombre del alumno
+    val alumnoNombre: String,
 
     @ColumnInfo(name = "fecha")
     val fecha: String,
@@ -22,7 +22,7 @@ data class SesionEntity(
     val duracion: Int,
 
     @ColumnInfo(name = "ejercicios")
-    val ejercicios: String, // Guardamos los ejercicios como string (ej: "Drill de Saque, Calentamiento")
+    val ejercicios: String,
 
     @ColumnInfo(name = "notas")
     val notas: String = "",

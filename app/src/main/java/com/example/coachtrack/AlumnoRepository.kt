@@ -1,10 +1,8 @@
 package com.example.coachtrack
 
-
 import android.content.Context
 import androidx.room.Room
 import kotlinx.coroutines.flow.Flow
-import kotlin.jvm.java
 
 class AlumnoRepository(context: Context) {
 
@@ -20,7 +18,30 @@ class AlumnoRepository(context: Context) {
 
     fun getAlumnos(): Flow<List<AlumnoEntity>> = dao.getAll()
 
-    suspend fun addAlumno(alumno: AlumnoEntity) = dao.insert(alumno)
+    /**
+     * Guarda evitando duplicidad por teléfono (clave única).
+     * - Si no existe alumno con ese teléfono => INSERT
+     * - Si existe => UPDATE sobre el mismo localId
+     */
+    suspend fun guardarAlumno(alumno: AlumnoEntity): Long {
+        val telKey = alumno.telefono.trim()
+        require(telKey.isNotBlank()) { "El teléfono no puede estar vacío si es la clave única." }
+
+        val existing = dao.getByTelefono(telKey)
+
+        return if (existing == null) {
+            dao.insert(alumno.copy(localId = 0L, telefono = telKey))
+        } else {
+            dao.update(
+                alumno.copy(
+                    localId = existing.localId,
+                    firebaseId = existing.firebaseId, // preserva si existe
+                    telefono = telKey
+                )
+            )
+            existing.localId
+        }
+    }
 
     suspend fun updateAlumno(alumno: AlumnoEntity) = dao.update(alumno)
 

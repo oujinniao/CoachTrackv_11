@@ -22,6 +22,10 @@ interface AlumnoDao {
     @Query("SELECT * FROM alumnos WHERE profesorInstructor = :profesorId")
     suspend fun getAlumnosByProfesorId(profesorId: Long): List<AlumnoEntity>
 
+    @Query("SELECT * FROM alumnos WHERE telefono = :telefono LIMIT 1")
+    suspend fun getByTelefono(telefono: String): AlumnoEntity?
+
+
     // ✅ Necesaria para evitar duplicación en sincronización Cloud→Room
     @Query("SELECT localId FROM alumnos WHERE firebaseId = :firebaseId LIMIT 1")
     suspend fun getLocalIdByFirebaseId(firebaseId: String): Long?

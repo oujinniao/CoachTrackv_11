@@ -11,7 +11,7 @@ import androidx.room.TypeConverters
         SesionAgendaEntity::class,
          ProfesorEntity::class,
          TacticaEntity::class],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

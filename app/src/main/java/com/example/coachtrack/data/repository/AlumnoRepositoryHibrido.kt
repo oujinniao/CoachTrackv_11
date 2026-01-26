@@ -1,5 +1,6 @@
 package com.example.coachtrack.data.repository
 
+import android.database.sqlite.SQLiteConstraintException
 import android.util.Log
 import com.example.coachtrack.AlumnoDao
 import com.example.coachtrack.AlumnoEntity
@@ -49,9 +50,51 @@ class AlumnoRepositoryHibrido(
     }
 
     suspend fun guardarAlumno(alumno: AlumnoEntity) = withContext(Dispatchers.IO) {
-        val localId = alumnoDao.upsert(alumno)
-        val savedLocal = alumno.copy(localId = localId)
 
+        // 1) Normalizar la clave única (teléfono)
+        val telKey = alumno.telefono.trim()
+
+        // Recomendación: si el teléfono será la "clave única", debe ser obligatorio
+        require(telKey.isNotBlank()) {
+            "El teléfono es obligatorio para evitar duplicidad de alumnos."
+        }
+
+        // 2) Resolver duplicidad: si es "nuevo" (localId=0) pero ya existe por teléfono, actualizar en lugar de insertar
+        val existingByTelefono = alumnoDao.getByTelefono(telKey)
+
+        val alumnoParaGuardar: AlumnoEntity =
+            if (alumno.localId == 0L && existingByTelefono != null) {
+                // ✅ Convertimos el insert en update: usamos el localId existente
+                // y preservamos firebaseId existente (si lo hubiera)
+                alumno.copy(
+                    localId = existingByTelefono.localId,
+                    firebaseId = existingByTelefono.firebaseId,
+                    telefono = telKey
+                )
+            } else {
+                // ✅ Caso normal: update (localId>0) o insert real (localId=0 sin existente)
+                alumno.copy(telefono = telKey)
+            }
+
+        // 3) Persistencia local
+        val localId: Long = try {
+            alumnoDao.upsert(alumnoParaGuardar)
+        } catch (e: SQLiteConstraintException) {
+            // Fallback defensivo: si el índice unique se dispara, hacemos update sobre el existente
+            val current = alumnoDao.getByTelefono(telKey)
+                ?: throw e
+
+            val forceUpdate = alumnoParaGuardar.copy(
+                localId = current.localId,
+                firebaseId = current.firebaseId
+            )
+            alumnoDao.update(forceUpdate)
+            current.localId
+        }
+
+        val savedLocal = alumnoParaGuardar.copy(localId = localId)
+
+        // 4) Cloud Sync (queda igual; si está deshabilitado, se corta aquí)
         if (!isCloudSyncEnabled) return@withContext
 
         val firestoreId = savedLocal.firebaseId ?: alumnosCollection.document().id

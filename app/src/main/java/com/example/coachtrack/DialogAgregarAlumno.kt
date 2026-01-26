@@ -17,10 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-// 💡 ASUMIMOS que NivelDropdownSelector está definido aquí o importado
-// import com.example.coachtrack.NivelDropdownSelector
 
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController // Importar para TextFieldDefaults.colors
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +35,9 @@ fun DialogAgregarAlumno(
     var direccion by remember { mutableStateOf(TextFieldValue(alumnoExistente?.direccion ?: "")) }
     var clasesPactadas by remember { mutableStateOf(alumnoExistente?.clasesPactadas ?: 1) }
 
+    var telefonoError by remember { mutableStateOf(false) }
+    //val telKey = telefono.text.trim()
+
     AlertDialog(
         onDismissRequest = onDismiss,
 
@@ -49,6 +51,16 @@ fun DialogAgregarAlumno(
         confirmButton = {
             Button(
                 onClick = {
+
+                    val telKey = telefono.text.trim()
+
+                    val telValido = telKey.length >= 8 && telKey.all { it.isDigit() }
+                    if (!telValido) {
+                        telefonoError = true
+                        return@Button
+                    }
+
+
                     if (nombre.text.isNotBlank()) {
                         val alumnoFinal = if (alumnoExistente != null) {
                             // Edición: Preservamos todos los campos de persistencia (localId, firebaseId, FKs)
@@ -56,8 +68,8 @@ fun DialogAgregarAlumno(
                                 nombre = nombre.text,
                                 nivelActual = nivel,
                                 objetivo = objetivo.text,
-                                telefono = telefono.text,
-                                direccion = direccion.text,
+                                telefono = telKey,
+                                direccion = direccion.text.trim(),
                                 clasesPactadas = clasesPactadas
                             )
                         } else {
@@ -65,15 +77,15 @@ fun DialogAgregarAlumno(
                             AlumnoEntity(
                                 localId = 0L, // Para que Room Autogenerate
                                 firebaseId = null, // Se asignará en el Repositorio
-                                nombre = nombre.text,
+                                nombre = nombre.text.trim(),
                                 nivelActual = nivel,
-                                objetivo = objetivo.text,
+                                objetivo = objetivo.text.trim(),
                                 clasesPactadas = clasesPactadas,
                                 clasesCursadas = 0,
                                 estadoPago = EstadoPago.PENDIENTE.name,
                                 edad = 0,
-                                telefono = telefono.text,
-                                direccion = direccion.text,
+                                telefono = telKey,
+                                direccion = direccion.text.trim(),
                                 notasEntrenador = "",
                                 profesorInstructor = null // FK local inicial
                             )
@@ -111,9 +123,26 @@ fun DialogAgregarAlumno(
                 )
                 // ☎️ Teléfono
                 OutlinedTextField(
-                    value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") },
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
+                    value = telefono,
+                    onValueChange = { nuevo ->
+                        // (Opcional) filtra solo dígitos, para que no entren letras ni espacios
+                        val filtrado = nuevo.text.filter { it.isDigit() }
+                        telefono = nuevo.copy(text = filtrado)
+                        telefonoError = false
+                    },
+                    label = { Text("Teléfono") },
+                    isError = telefonoError,
+                    supportingText = {
+                        if (telefonoError) Text("Ingrese un número de teléfono válido")
+                    },
+                    singleLine = true,
+                    maxLines = 1,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
+
                 // 📍 Dirección
                 OutlinedTextField(
                     value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección o email") },

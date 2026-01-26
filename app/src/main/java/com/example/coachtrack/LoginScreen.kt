@@ -18,7 +18,7 @@ import com.google.firebase.auth.ktx.auth
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    // CAMBIO CRÍTICO: Recibe el ViewModel para ejecutar la acción PRO de sincronización
+
     carteraViewModel: CarteraViewModel,
     onLoginSuccess: () -> Unit,
     onRegisterClick: () -> Unit
@@ -93,8 +93,7 @@ fun LoginScreen(
                         .addOnCompleteListener { task ->
                             isLoading = false
                             if (task.isSuccessful) {
-                                // 1. LLAMADA CRÍTICA: Iniciar la sincronización (Recuperación Cloud -> Room)
-                                // Esto garantiza la continuidad operacional (PRO Feature).
+
                                 carteraViewModel.iniciarSincronizacionInicial()
 
                                 // 2. Navegar
@@ -138,8 +137,7 @@ fun LoginScreen(
                         .addOnCompleteListener { task ->
                             isLoading = false
                             if (task.isSuccessful) {
-                                // Llamar a sincronización: el ViewModel verificará si este usuario (anónimo)
-                                // es PRO o FREE y ejecutará o bloqueará la acción.
+
                                 carteraViewModel.iniciarSincronizacionInicial()
                                 onLoginSuccess()
                             } else {

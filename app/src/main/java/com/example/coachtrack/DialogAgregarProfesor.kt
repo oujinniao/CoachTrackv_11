@@ -51,6 +51,8 @@ fun DialogAgregarProfesor(
     var disponibilidad by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(profesorExistente?.disponibilidad ?: ""))
     }
+    var emailError by remember { mutableStateOf(false) }
+    val emailKey = email.text.trim().lowercase()
 
     // Estados para los dropdowns
     var alumnoSeleccionadoIdLocal by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -104,7 +106,12 @@ fun DialogAgregarProfesor(
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = email,
+                onValueChange = { email = it; emailError = false },
+                label = { Text("Email") },
+                isError = emailError,
+                supportingText = { if (emailError) Text("Email es obligatorio") else null },
+                modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
 
             // DROPDOWN ESPECIALIDAD
@@ -204,10 +211,10 @@ fun DialogAgregarProfesor(
                         id = profesorExistente?.id ?: 0,
                         // ✅ CLAVE: Mantenemos el firebaseId existente al editar (o null si es nuevo)
                         firebaseId = profesorExistente?.firebaseId,
-                        nombre = nombre.text,
+                        nombre = nombre.text.trim(),
                         especialidad = especialidad,
-                        telefono = telefono.text,
-                        email = email.text,
+                        telefono = telefono.text.trim(),
+                        email = emailKey,
                         descripcion = descripcion.text,
                         disponibilidad = disponibilidad.text
                     )

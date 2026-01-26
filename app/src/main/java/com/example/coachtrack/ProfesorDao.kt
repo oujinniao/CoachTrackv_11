@@ -13,6 +13,9 @@ interface ProfesorDao {
     @Query("SELECT * FROM profesores WHERE firebaseId = :firebaseId LIMIT 1")
     suspend fun getByFirebaseId(firebaseId: String): ProfesorEntity?
 
+    @Query("SELECT * FROM profesores WHERE email = :email LIMIT 1")
+    suspend fun getByEmail(email: String): ProfesorEntity?
+
     // Ahora devuelve Long con el id generado por Room
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(coachTrack: ProfesorEntity): Long
@@ -28,4 +31,12 @@ interface ProfesorDao {
 
     @Query("SELECT id FROM profesores WHERE firebaseId = :firebaseId LIMIT 1")
     suspend fun getLocalIdByFirebaseId(firebaseId: String): Long?
+
+    @Query("SELECT * FROM profesores WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): ProfesorEntity?
+
+
+
+
 }
+

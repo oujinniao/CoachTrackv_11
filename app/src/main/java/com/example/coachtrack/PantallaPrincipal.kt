@@ -16,6 +16,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.coachtrack.BotonFuncionalidad
 import com.example.coachtrack.TopAppBarPrincipal
 
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.filled.ManageAccounts
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Campaign
+
+
+
 @Composable
 fun PantallaPrincipal(
     onPlanificarClick: () -> Unit,
@@ -113,6 +121,7 @@ fun PantallaPrincipal(
             // BOTÓN PLANIFICAR SESIÓN
             //------------------------------------
             BotonFuncionalidad(
+                icon=Icons.Default.EventNote,
                 texto = "PLANIFICAR SESIÓN",
                 descripcion = "Crea tu clase en 2 clics",
                 onClick = onPlanificarClick
@@ -124,6 +133,7 @@ fun PantallaPrincipal(
             // BOTÓN GESTIÓN
             //------------------------------------
             BotonFuncionalidad(
+                icon= Icons.Default.ManageAccounts,
                 texto = "GESTIÓN",
                 descripcion = "Alumnos, historial, profesores, pagos",
                 onClick = onGestionClick
@@ -135,6 +145,7 @@ fun PantallaPrincipal(
            // BOTÓN DASHBOARD
            //------------------------------------
             BotonFuncionalidad(
+                icon= Icons.Default.Dashboard,
                 texto = "DASHBOARD",
                 descripcion = "Resumen de alumnos, pagos y clases",
                 onClick = onDashboardClick
@@ -144,6 +155,7 @@ fun PantallaPrincipal(
             // BOTÓN MARKETING
             //------------------------------------
             BotonFuncionalidad(
+                icon= Icons.Default.Campaign,
                 texto = "MARKETING / PORTAFOLIO",
                 descripcion = "Graba y envía feedback visual",
                 onClick = onVideoAnalisisClick
@@ -217,6 +229,7 @@ fun TopAppBarPrincipal() {
 
 @Composable
 fun BotonFuncionalidad(
+    icon: ImageVector,
     texto: String,
     descripcion: String,
     onClick: () -> Unit
@@ -234,12 +247,24 @@ fun BotonFuncionalidad(
             contentColor = MaterialTheme.colorScheme.onPrimary
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.Center
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(texto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(descripcion, style = MaterialTheme.typography.bodySmall)
+            Icon(
+                imageVector = icon,
+                contentDescription = texto,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(texto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(descripcion, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
