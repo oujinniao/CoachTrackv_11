@@ -47,10 +47,8 @@ fun RegisterScreen(
     val dataStore = remember { CoachProfileDataStore(context) }
     val scope = rememberCoroutineScope()
 
-    // ⭐ Nuevos campos para la cabecera
     var nombre by remember { mutableStateOf("") }
     var academia by remember { mutableStateOf("") }
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var repeatPassword by remember { mutableStateOf("") }
@@ -77,8 +75,6 @@ fun RegisterScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // ---------- Nombre profesor ----------
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -93,7 +89,6 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // ---------- Academia / Club ----------
             OutlinedTextField(
                 value = academia,
                 onValueChange = { academia = it },
@@ -108,7 +103,6 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // ---------- Email ----------
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -123,7 +117,6 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // ---------- Password ----------
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -157,7 +150,6 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
-                    // Validaciones básicas
                     if (nombre.isBlank()) {
                         errorMessage = "Ingresa el nombre del profesor"
                         return@Button
@@ -180,10 +172,9 @@ fun RegisterScreen(
 
                     auth.createUserWithEmailAndPassword(email.trim(), password)
                         .addOnCompleteListener { task ->
+                            isLoading = false
                             if (task.isSuccessful) {
                                 val uid = auth.currentUser?.uid ?: ""
-
-                                // ⭐ Guardar perfil en DataStore para la cabecera
                                 scope.launch {
                                     dataStore.guardarPerfil(
                                         nombre = nombre.trim(),
@@ -191,11 +182,8 @@ fun RegisterScreen(
                                         userId = uid
                                     )
                                 }
-
-                                isLoading = false
                                 onRegisterSuccess()
                             } else {
-                                isLoading = false
                                 errorMessage = task.exception?.localizedMessage
                                     ?: "Error al crear la cuenta"
                             }

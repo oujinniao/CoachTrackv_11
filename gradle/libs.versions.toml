@@ -14,6 +14,7 @@ firebase-crashlytics = "3.0.2"
 firebase-perf = "1.4.2"
 room="2.6.1"
 foundation = "1.10.0"
+timber="5.0.0"
 
 
 [libraries]
@@ -35,6 +36,7 @@ room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

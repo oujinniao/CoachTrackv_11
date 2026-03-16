@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -14,12 +15,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
 
-
-
+@Composable
+private fun colorParaNivel(nivel: String): Color = when (nivel) {
+    "Inicial"     -> MaterialTheme.colorScheme.outline
+    "Básico"      -> MaterialTheme.colorScheme.primary
+    "Intermedio"  -> MaterialTheme.colorScheme.secondary
+    "Avanzado"    -> MaterialTheme.colorScheme.tertiary
+    "Profesional" -> MaterialTheme.colorScheme.error
+    else          -> MaterialTheme.colorScheme.onSurface
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,66 +36,67 @@ fun DialogAgregarAlumno(
     onDismiss: () -> Unit,
     onGuardar: (AlumnoEntity) -> Unit
 ) {
-    var nombre by remember { mutableStateOf(TextFieldValue(alumnoExistente?.nombre ?: "")) }
+    var nombre by remember { mutableStateOf(alumnoExistente?.nombre ?: "") }
     var nivel by remember { mutableStateOf(alumnoExistente?.nivelActual ?: "Inicial") }
-    var objetivo by remember { mutableStateOf(TextFieldValue(alumnoExistente?.objetivo ?: "")) }
-    var telefono by remember { mutableStateOf(TextFieldValue(alumnoExistente?.telefono ?: "")) }
-    var direccion by remember { mutableStateOf(TextFieldValue(alumnoExistente?.direccion ?: "")) }
+    var objetivo by remember { mutableStateOf(alumnoExistente?.objetivo ?: "") }
+    var telefono by remember { mutableStateOf(alumnoExistente?.telefono ?: "") }
+    var direccion by remember { mutableStateOf(alumnoExistente?.direccion ?: "") }
     var clasesPactadas by remember { mutableStateOf(alumnoExistente?.clasesPactadas ?: 1) }
-
+    var tarifaPorClase by remember { mutableStateOf(alumnoExistente?.tarifaPorClase?.toString() ?: "") }
     var telefonoError by remember { mutableStateOf(false) }
-    //val telKey = telefono.text.trim()
+    var tarifaError by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-
         title = {
             Text(
                 text = if (alumnoExistente == null) "Nuevo Alumno" else "Editar Alumno",
                 style = MaterialTheme.typography.titleLarge
             )
         },
-
         confirmButton = {
             Button(
                 onClick = {
-
-                    val telKey = telefono.text.trim()
-
+                    val telKey = telefono.trim()
                     val telValido = telKey.length >= 8 && telKey.all { it.isDigit() }
                     if (!telValido) {
                         telefonoError = true
                         return@Button
                     }
 
+                    val tarifaInt = tarifaPorClase.trim().toIntOrNull() ?: -1
+                    if (tarifaInt < 0) {
+                        tarifaError = true
+                        return@Button
+                    }
 
-                    if (nombre.text.isNotBlank()) {
+                    if (nombre.isNotBlank()) {
                         val alumnoFinal = if (alumnoExistente != null) {
-                            // Edición: Preservamos todos los campos de persistencia (localId, firebaseId, FKs)
                             alumnoExistente.copy(
-                                nombre = nombre.text,
+                                nombre = nombre,
                                 nivelActual = nivel,
-                                objetivo = objetivo.text,
+                                objetivo = objetivo,
                                 telefono = telKey,
-                                direccion = direccion.text.trim(),
-                                clasesPactadas = clasesPactadas
+                                direccion = direccion.trim(),
+                                clasesPactadas = clasesPactadas,
+                                tarifaPorClase = tarifaInt
                             )
                         } else {
-                            // ✅ Creación: Inicializamos la Entidad con IDs de Room y Firebase nulos
                             AlumnoEntity(
-                                localId = 0L, // Para que Room Autogenerate
-                                firebaseId = null, // Se asignará en el Repositorio
-                                nombre = nombre.text.trim(),
+                                localId = 0L,
+                                firebaseId = null,
+                                nombre = nombre.trim(),
                                 nivelActual = nivel,
-                                objetivo = objetivo.text.trim(),
+                                objetivo = objetivo.trim(),
                                 clasesPactadas = clasesPactadas,
                                 clasesCursadas = 0,
                                 estadoPago = EstadoPago.PENDIENTE.name,
                                 edad = 0,
                                 telefono = telKey,
-                                direccion = direccion.text.trim(),
+                                direccion = direccion.trim(),
                                 notasEntrenador = "",
-                                profesorInstructor = null // FK local inicial
+                                profesorInstructor = null,
+                                tarifaPorClase = tarifaInt
                             )
                         }
                         onGuardar(alumnoFinal)
@@ -100,34 +109,39 @@ fun DialogAgregarAlumno(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         },
-
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 0.dp),
+                    .padding(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // 🧍 Nombre
                 OutlinedTextField(
-                    value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") },
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                // 🎾 Nivel actual
-                NivelDropdownSelector(nivelActual = nivel, onNivelSeleccionado = { nivel = it })
-                // 🎯 Objetivo
+
+                NivelDropdownSelector(
+                    nivelActual = nivel,
+                    onNivelSeleccionado = { nivel = it }
+                )
+
                 OutlinedTextField(
-                    value = objetivo, onValueChange = { objetivo = it }, label = { Text("Objetivo de entrenamiento") },
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
+                    value = objetivo,
+                    onValueChange = { objetivo = it },
+                    label = { Text("Objetivo de entrenamiento") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                // ☎️ Teléfono
+
                 OutlinedTextField(
                     value = telefono,
                     onValueChange = { nuevo ->
-                        // (Opcional) filtra solo dígitos, para que no entren letras ni espacios
-                        val filtrado = nuevo.text.filter { it.isDigit() }
-                        telefono = nuevo.copy(text = filtrado)
+                        telefono = nuevo.filter { it.isDigit() }
                         telefonoError = false
                     },
                     label = { Text("Teléfono") },
@@ -136,38 +150,56 @@ fun DialogAgregarAlumno(
                         if (telefonoError) Text("Ingrese un número de teléfono válido")
                     },
                     singleLine = true,
-                    maxLines = 1,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                    ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // 📍 Dirección
                 OutlinedTextField(
-                    value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección o email") },
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp)
+                    value = direccion,
+                    onValueChange = { direccion = it },
+                    label = { Text("Dirección o email") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
+                OutlinedTextField(
+                    value = tarifaPorClase,
+                    onValueChange = { nuevo ->
+                        tarifaPorClase = nuevo.filter { it.isDigit() }
+                        tarifaError = false
+                    },
+                    label = { Text("Tarifa por clase") },
+                    isError = tarifaError,
+                    supportingText = {
+                        if (tarifaError) Text("Ingrese un valor válido")
+                        else Text("Valor en tu moneda local")
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(Modifier.height(4.dp))
+
                 Text("Clases pactadas", style = MaterialTheme.typography.titleSmall)
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 0.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Restar
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .clickable { if (clasesPactadas > 1) clasesPactadas-- }
-                            .align(Alignment.CenterVertically),
+                            .clickable { if (clasesPactadas > 1) clasesPactadas-- },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Restar clase", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Icon(
+                            Icons.Default.Remove,
+                            contentDescription = "Restar clase",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
 
                     Text(
@@ -176,19 +208,22 @@ fun DialogAgregarAlumno(
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .width(60.dp)
-                            .background(Color(0xFFF5F5F5))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(vertical = 4.dp)
                     )
 
-                    // Sumar
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .clickable { clasesPactadas++ }
-                            .align(Alignment.CenterVertically),
+                            .clickable { clasesPactadas++ },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Agregar clase", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Agregar clase",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -196,6 +231,7 @@ fun DialogAgregarAlumno(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NivelDropdownSelector(
     nivelActual: String,
@@ -203,25 +239,17 @@ private fun NivelDropdownSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val niveles = listOf("Inicial", "Básico", "Intermedio", "Avanzado", "Profesional")
+    val colorNivel = colorParaNivel(nivelActual)
 
-    val colorNivel = when (nivelActual) {
-        "Inicial" -> Color.Gray
-        "Básico" -> Color(0xFF64B5F6)
-        "Intermedio" -> Color(0xFF4CAF50)
-        "Avanzado" -> Color(0xFFFFA000)
-        "Profesional" -> Color(0xFFD32F2F)
-        else -> Color.Black
-    }
-    Column (
-        modifier = Modifier.fillMaxWidth()){
-        Text(text = "Nivel Actual",
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Nivel Actual",
             style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(bottom = 4.dp))
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
     }
 
-    Box(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = nivelActual,
             onValueChange = {},
@@ -229,13 +257,12 @@ private fun NivelDropdownSelector(
             enabled = false,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 60.dp)
                 .clickable { expanded = true },
             textStyle = LocalTextStyle.current.copy(color = colorNivel),
             colors = OutlinedTextFieldDefaults.colors(
                 disabledBorderColor = colorNivel.copy(alpha = 0.6f),
                 disabledTextColor = colorNivel,
-                disabledContainerColor = Color.Transparent
+                disabledContainerColor = MaterialTheme.colorScheme.surface
             ),
             trailingIcon = {
                 Icon(
@@ -252,22 +279,14 @@ private fun NivelDropdownSelector(
             modifier = Modifier.fillMaxWidth(0.9f)
         ) {
             niveles.forEach { nivel ->
-                val nivelColor = when (nivel) {
-                    "Inicial" -> Color.Gray
-                    "Básico" -> Color(0xFF64B5F6)
-                    "Intermedio" -> Color(0xFF4CAF50)
-                    "Avanzado" -> Color(0xFFFFA000)
-                    "Profesional" -> Color(0xFFD32F2F)
-                    else -> Color.Black
-                }
-
                 DropdownMenuItem(
                     text = {
                         Text(
                             nivel,
-                            color = nivelColor,
+                            color = colorParaNivel(nivel),
                             modifier = Modifier.fillMaxWidth()
-                        ) },
+                        )
+                    },
                     onClick = {
                         onNivelSeleccionado(nivel)
                         expanded = false

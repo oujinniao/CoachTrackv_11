@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Inicializar Firebase una sola vez
-        FirebaseApp.initializeApp(this)
+       // FirebaseApp.initializeApp(this)
 
         setContent {
             CoachTrackTheme {

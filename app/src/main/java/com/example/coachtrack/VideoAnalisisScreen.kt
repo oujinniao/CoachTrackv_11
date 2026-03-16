@@ -7,15 +7,20 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -24,26 +29,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import com.example.coachtrack.DialogCompartir
-import com.example.coachtrack.DropdownMenuDemo
-import com.example.coachtrack.ShareOption
-import com.example.coachtrack.compartirTexto
-import com.example.coachtrack.compartirVideoOTexto
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.io.path.createTempFile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
+fun VideoAnalisisScreen(
+    onVolverClick: () -> Unit,
+    perfilViewModel: PerfilProfesorViewModel = viewModel()
+) {
+    val perfil by perfilViewModel.perfil.collectAsState()
 
-
-    //---------------BACHHANDLER PARA ESTA PANTALLA-------------------
-
-    BackHandler {
-        onVolverClick()
-    }
+    BackHandler { onVolverClick() }
 
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -56,11 +55,12 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
     var modoDemo by remember { mutableStateOf(false) }
     var mensajeSeleccionado by remember { mutableStateOf("") }
 
-    // 🧩 Archivo temporal para grabar video real
+    val firmaProfesor = "👤 ${perfil.nombreProfesor} – ${perfil.academia} 🎾"
+
     val videoTempFile = remember {
-        val file = createTempFile("video_temp_", ".mp4").toFile()
-        file.deleteOnExit()
-        file
+        File.createTempFile("video_temp_", ".mp4", context.cacheDir).also {
+            it.deleteOnExit()
+        }
     }
     val videoUriForCamara = remember {
         FileProvider.getUriForFile(
@@ -70,7 +70,6 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
         )
     }
 
-    // 📱 Lanzadores
     val launcherArchivo = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -135,11 +134,10 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // 🎞 Vista del video
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -233,7 +231,6 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
 
             Spacer(Modifier.height(20.dp))
 
-            // Vista previa
             if (titulo.isNotBlank() || comentario.isNotBlank()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -250,7 +247,7 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
                         Text(comentario, color = Color.DarkGray)
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "👤 Prof. Alejandro González – Academia Central 🎾",
+                            firmaProfesor,
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
@@ -279,7 +276,6 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
 
             Spacer(Modifier.height(20.dp))
 
-            // 📊 Estado actual
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
@@ -292,13 +288,15 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
                     Text("• Modo: ${if (modoDemo) "🔶 Demostración" else "🔹 Publicación real"}")
                 }
             }
+
+            Spacer(Modifier.height(24.dp))
+            SeccionProBloqueada()
+            Spacer(Modifier.height(80.dp))
         }
     }
 
-    // 🔹 Diálogo de compartir redes
     if (mostrarDialogo) {
         if (modoDemo) {
-            // MODO DEMOSTRACIÓN: Simula el envío
             scope.launch {
                 snackbarHostState.showSnackbar(
                     "🎮 MODO DEMO: Simulando envío a redes sociales...\n" +
@@ -308,7 +306,6 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
             }
             mostrarDialogo = false
         } else {
-            // MODO REAL: Abre diálogo de compartir
             DialogCompartir(
                 context = context,
                 onCerrar = { mostrarDialogo = false },
@@ -316,9 +313,218 @@ fun VideoAnalisisScreen(onVolverClick: () -> Unit) {
                 snackbarHostState = snackbarHostState,
                 videoUri = videoUri,
                 titulo = titulo,
-                comentario = comentario
+                comentario = comentario,
+                firmaProfesor = firmaProfesor
             )
         }
+    }
+}
+
+@Composable
+fun SeccionProBloqueada() {
+    var mostrarDialogoUpgrade by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .blur(3.dp)
+        ) {
+            Text(
+                "📁 Galería de Progreso",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color(0xFF1565C0)
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(80.dp)
+                            .background(Color(0xFFBBDEFB), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.PlayCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF1565C0),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "📊 Clase 1 vs Clase Final",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color(0xFF1565C0)
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(100.dp)
+                        .background(Color(0xFFE8F5E9), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Clase 1", color = Color(0xFF2E7D32), fontWeight = FontWeight.Medium)
+                }
+                Icon(
+                    Icons.Default.CompareArrows,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(100.dp)
+                        .background(Color(0xFFFFF9C4), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Clase Final", color = Color(0xFFF57F17), fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.3f),
+                            Color.White.copy(alpha = 0.85f)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .border(1.dp, Color(0xFFFFD700), RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDE7)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("🔒", fontSize = 36.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Funciones PRO",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFF5D4037)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "📁 Galería completa por alumno\n" +
+                                "📊 Comparación Clase 1 vs Final\n" +
+                                "☁️ Backup en la nube\n" +
+                                "🤖 Análisis de progreso con IA",
+                        fontSize = 13.sp,
+                        color = Color(0xFF5D4037),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 22.sp
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { mostrarDialogoUpgrade = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFB300)
+                        ),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Quiero CoachTrack PRO",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (mostrarDialogoUpgrade) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoUpgrade = false },
+            icon = { Text("⭐", fontSize = 32.sp) },
+            title = {
+                Text(
+                    "CoachTrack PRO",
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        "Lleva tu coaching al siguiente nivel con herramientas profesionales:",
+                        color = Color.DarkGray,
+                        fontSize = 14.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    listOf(
+                        "📁 Galería ilimitada de videos por alumno",
+                        "📊 Comparación visual Clase 1 vs Clase Final",
+                        "☁️ Backup automático en la nube",
+                        "🤖 Análisis de progreso con Inteligencia Artificial",
+                        "📤 Compartir directo a Instagram y Telegram",
+                        "👥 Gestión ilimitada de alumnos"
+                    ).forEach { feature ->
+                        Text(
+                            feature,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "🚀 Próximamente disponible",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1565C0),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { mostrarDialogoUpgrade = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
+                ) {
+                    Text("¡Me interesa!", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoUpgrade = false }) {
+                    Text("Más tarde")
+                }
+            }
+        )
     }
 }
 
@@ -352,74 +558,6 @@ fun DropdownMenuDemo(mensajes: List<String>, onSeleccion: (String) -> Unit) {
 }
 
 @Composable
-fun DialogCompartir(
-    context: Context,
-    onCerrar: () -> Unit,
-    scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
-    videoUri: Uri?,
-    titulo: String,
-    comentario: String
-) {
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        confirmButton = {
-            TextButton(onClick = onCerrar) {
-                Text("Cerrar")
-            }
-        },
-        title = { Text("Compartir Video en...") },
-        text = {
-            Column {
-                ShareOption("Instagram", Icons.Default.Photo) {
-                    val mensajeInstagram = if (titulo.isNotBlank()) {
-                        "$titulo\n\n$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
-                    } else {
-                        "$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
-                    }
-                    compartirVideoOTexto(context, videoUri, mensajeInstagram, "instagram")
-                    scope.launch { snackbarHostState.showSnackbar("📸 Compartiendo en Instagram...") }
-                    onCerrar()
-                }
-
-                ShareOption("WhatsApp", Icons.Default.Send) {
-                    val mensajeWhatsApp = if (titulo.isNotBlank()) {
-                        "$titulo\n\n$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
-                    } else {
-                        "$comentario\n\n👤 Prof. Alejandro González – Academia Central 🎾"
-                    }
-                    compartirVideoOTexto(context, videoUri, mensajeWhatsApp, "whatsapp")
-                    scope.launch { snackbarHostState.showSnackbar("💬 Compartiendo en WhatsApp...") }
-                    onCerrar()
-                }
-
-                ShareOption("Telegram", Icons.Default.Message) {
-                    val mensajeTelegram = if (titulo.isNotBlank()) {
-                        "$titulo\n\n$comentario\n\n💪 Compartido via CoachTrack"
-                    } else {
-                        "$comentario\n\n💪 Compartido via CoachTrack"
-                    }
-                    compartirVideoOTexto(context, videoUri, mensajeTelegram, "telegram")
-                    scope.launch { snackbarHostState.showSnackbar("📢 Compartiendo en Telegram...") }
-                    onCerrar()
-                }
-
-                ShareOption("Otra App", Icons.Default.Share) {
-                    val mensajeGeneral = if (titulo.isNotBlank()) {
-                        "$titulo\n\n$comentario\n\n🎾 Compartido via CoachTrack"
-                    } else {
-                        "$comentario\n\n🎾 Compartido via CoachTrack"
-                    }
-                    compartirVideoOTexto(context, videoUri, mensajeGeneral, "general")
-                    scope.launch { snackbarHostState.showSnackbar("📤 Eligiendo app para compartir...") }
-                    onCerrar()
-                }
-            }
-        }
-    )
-}
-
-@Composable
 fun ShareOption(nombre: String, icon: ImageVector, onClick: () -> Unit) {
     Row(
         modifier = Modifier
@@ -434,62 +572,92 @@ fun ShareOption(nombre: String, icon: ImageVector, onClick: () -> Unit) {
     }
 }
 
-// ✅ FUNCIÓN PRINCIPAL MEJORADA - Comparte VIDEO + TEXTO
+@Composable
+fun DialogCompartir(
+    context: Context,
+    onCerrar: () -> Unit,
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    videoUri: Uri?,
+    titulo: String,
+    comentario: String,
+    firmaProfesor: String
+) {
+    val mensajeBase = if (titulo.isNotBlank()) "$titulo\n\n$comentario\n\n$firmaProfesor"
+    else "$comentario\n\n$firmaProfesor"
+
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        confirmButton = {
+            TextButton(onClick = onCerrar) { Text("Cerrar") }
+        },
+        title = { Text("Compartir Video en...") },
+        text = {
+            Column {
+                ShareOption("Instagram", Icons.Default.Photo) {
+                    compartirVideoOTexto(context, videoUri, mensajeBase, "instagram")
+                    scope.launch { snackbarHostState.showSnackbar("📸 Compartiendo en Instagram...") }
+                    onCerrar()
+                }
+                ShareOption("WhatsApp", Icons.Default.Send) {
+                    compartirVideoOTexto(context, videoUri, mensajeBase, "whatsapp")
+                    scope.launch { snackbarHostState.showSnackbar("💬 Compartiendo en WhatsApp...") }
+                    onCerrar()
+                }
+                ShareOption("Telegram", Icons.Default.Message) {
+                    compartirVideoOTexto(context, videoUri, mensajeBase, "telegram")
+                    scope.launch { snackbarHostState.showSnackbar("📢 Compartiendo en Telegram...") }
+                    onCerrar()
+                }
+                ShareOption("Otra App", Icons.Default.Share) {
+                    compartirVideoOTexto(context, videoUri, mensajeBase, "general")
+                    scope.launch { snackbarHostState.showSnackbar("📤 Eligiendo app para compartir...") }
+                    onCerrar()
+                }
+            }
+        }
+    )
+}
+
 fun compartirVideoOTexto(context: Context, videoUri: Uri?, mensaje: String, plataforma: String = "general") {
     try {
         if (videoUri != null) {
-            // Intentar compartir VIDEO + TEXTO
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "video/*"
                 putExtra(Intent.EXTRA_STREAM, videoUri)
                 putExtra(Intent.EXTRA_TEXT, mensaje)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-                // Especificar app si es necesario
                 when (plataforma) {
-                    "whatsapp" -> setPackage("com.whatsapp")
+                    "whatsapp"  -> setPackage("com.whatsapp")
                     "instagram" -> setPackage("com.instagram.android")
-                    "telegram" -> setPackage("org.telegram.messenger")
-                    // Para "general" no se establece package
+                    "telegram"  -> setPackage("org.telegram.messenger")
                 }
             }
             context.startActivity(intent)
         } else {
-            // Solo texto si no hay video
             compartirTexto(context, mensaje)
         }
     } catch (e: Exception) {
-        // Fallback a solo texto
         compartirTexto(context, "$mensaje\n\n❌ No se pudo adjuntar el video")
     }
 }
 
-// ✅ FUNCIÓN PARA SOLO TEXTO (como fallback)
 fun compartirTexto(context: Context, mensaje: String) {
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         action = Intent.ACTION_SEND
         putExtra(Intent.EXTRA_TEXT, mensaje)
         type = "text/plain"
     }
-    val shareIntent = Intent.createChooser(sendIntent, "Compartir vía")
-    context.startActivity(shareIntent)
+    context.startActivity(Intent.createChooser(sendIntent, "Compartir vía"))
 }
 
-// ✅ FUNCIÓN PARA INSTAGRAM (mejorada)
 fun abrirInstagram(context: Context, usuario: String? = null) {
-    val uri = if (usuario != null)
-        Uri.parse("http://instagram.com/_u/$usuario")
-    else
-        Uri.parse("http://instagram.com/")
-
-    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-        setPackage("com.instagram.android")
-    }
-
+    val uri = if (usuario != null) Uri.parse("http://instagram.com/_u/$usuario")
+    else Uri.parse("http://instagram.com/")
+    val intent = Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.instagram.android") }
     try {
         context.startActivity(intent)
     } catch (e: Exception) {
-        // Fallback: abrir Instagram en navegador
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://instagram.com")))
     }
 }

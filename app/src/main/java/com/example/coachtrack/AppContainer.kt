@@ -7,25 +7,22 @@ import com.example.coachtrack.data.repository.ProfesorRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import kotlin.jvm.java
 
 class AppContainer(applicationContext: Application) {
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = Firebase.firestore
 
-    // ✅ EXPUSE DB PARA VIEWMODELS (HistorialViewModel, DashboardViewModel, etc.)
     val db: CoachTrackDatabase by lazy {
         Room.databaseBuilder(
             context = applicationContext,
             klass = CoachTrackDatabase::class.java,
             name = "coachtrack_db"
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(CoachTrackDatabase.MIGRATION_13_14)
             .build()
     }
 
-    // DAOs (pueden quedarse privados; el ViewModel accederá a través de db)
     private val alumnoDao by lazy { db.alumnoDao() }
     private val sesionDao by lazy { db.sesionDao() }
     private val tacticaDao by lazy { db.tacticaDao() }
@@ -53,6 +50,6 @@ class AppContainer(applicationContext: Application) {
     }
 
     val sesionRepository: SesionRepository by lazy {
-        SesionRepository(applicationContext)
+        SesionRepository(db.sesionDao())
     }
 }

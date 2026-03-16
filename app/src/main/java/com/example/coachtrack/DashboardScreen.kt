@@ -1,6 +1,5 @@
 package com.example.coachtrack
 
-import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,10 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,17 +24,12 @@ fun DashboardScreen(
     onAbrirFichaAlumno: (AlumnoEntity) -> Unit,
     onGestionClick: () -> Unit
 ) {
-    val context = LocalContext.current
-
-    val vm: DashboardViewModel = viewModel(
-        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
-            .getInstance(context.applicationContext as Application)
-    )
+    val vm: DashboardViewModel = viewModel()
 
     val state by vm.uiState.collectAsState()
-//
+
     LaunchedEffect(state.total) {
-        println("DASHBOARD -> total=${state.total}, filtro=${state.filtro}")
+        Timber.d("DASHBOARD -> total=${state.total}, filtro=${state.filtro}")
     }
 
     Scaffold(
@@ -190,6 +184,22 @@ private fun AlumnoDashboardCard(
     val pactadas = alumno.clasesPactadas
     val restantes = (pactadas - cursadas).coerceAtLeast(0)
 
+    val chipColors = when (alumno.estadoPago) {
+        EstadoPago.ADELANTADO.name -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        EstadoPago.PENDIENTE.name -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+        EstadoPago.DEUDA.name -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            labelColor = MaterialTheme.colorScheme.onErrorContainer
+        )
+        else -> AssistChipDefaults.assistChipColors()
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -206,7 +216,8 @@ private fun AlumnoDashboardCard(
                 }
                 AssistChip(
                     onClick = {},
-                    label = { Text(alumno.estadoPago) }
+                    label = { Text(alumno.estadoPago) },
+                    colors = chipColors
                 )
             }
         }

@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.*
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -17,6 +18,8 @@ fun AppNavigation(
 ) {
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Principal) }
     val backStack = remember { mutableStateListOf<AppScreen>() }
+
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     fun navigate(to: AppScreen) {
         backStack.add(currentScreen)
@@ -29,7 +32,6 @@ fun AppNavigation(
             else fallback
     }
 
-    // ✅ Back físico SIEMPRE usa tu stack.
     BackHandler(enabled = backStack.isNotEmpty()) {
         goBack()
     }
@@ -50,7 +52,7 @@ fun AppNavigation(
                 onGestionClick = { navigate(AppScreen.Gestion) },
                 onVideoAnalisisClick = { navigate(AppScreen.VideoAnalisis) },
                 onDashboardClick = { navigate(AppScreen.Dashboard) },
-                userId = "demo_user",
+                userId = userId,
                 onCerrarSesion = { onLogout() }
             )
 
@@ -67,7 +69,7 @@ fun AppNavigation(
             )
 
             AppScreen.Planificacion -> PlanificacionScreen(
-                onVolverClick = { goBack() } // ✅ vuelve a Dashboard si venías de Dashboard
+                onVolverClick = { goBack() }
             )
 
             AppScreen.Historial -> HistorialScreen(
@@ -101,18 +103,17 @@ fun AppNavigation(
 
             is AppScreen.FichaAlumno -> FichaAlumnoScreen(
                 localId = screen.localId,
-                onVolver = { goBack() }, // ✅ vuelve a Dashboard o Cartera según desde dónde entraste
+                onVolver = { goBack() },
                 onNuevaSesionClick = { /* futuro */ }
             )
 
-            AppScreen.Video -> Box {}
-            AppScreen.Camara -> Box {}
-            AppScreen.Inicio -> Box {}
+            AppScreen.Video -> goBack()
+            AppScreen.Camara -> goBack()
+            AppScreen.Inicio -> goBack()
 
-            else -> CoachTrackSplashScreen(
+            AppScreen.Splash -> CoachTrackSplashScreen(
                 onSplashFinished = { currentScreen = AppScreen.Principal }
             )
         }
     }
 }
-//

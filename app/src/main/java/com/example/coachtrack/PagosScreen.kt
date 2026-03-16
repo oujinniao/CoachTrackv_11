@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +26,6 @@ fun PagosScreen(
 
     val alumnos by viewModel.alumnos.collectAsState()
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -52,7 +50,6 @@ fun PagosScreen(
                 Text("No hay alumnos disponibles aún.")
             }
         } else {
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -61,7 +58,6 @@ fun PagosScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(alumnos, key = { it.localId }) { alumno ->
-
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -73,21 +69,21 @@ fun PagosScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text(alumno.nombre, style = MaterialTheme.typography.titleMedium)
-
-                                // Muestra un ID entendible para demo:
-                                // - si existe firebaseId, úsalo (pro/futuro)
-                                // - si no, usa localId
-                                val idMostrar = alumno.firebaseId ?: alumno.localId.toString()
-                                Text("ID: $idMostrar", style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    alumno.nombre,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    "Clases: ${alumno.clasesCursadas} / ${alumno.clasesPactadas} • ${alumno.estadoPago}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
 
                             Button(
                                 onClick = {
-                                    scope.launch {
-                                        val link = generarEnlacePagoRealista(alumno)
-                                        compartirEnlace(ctx, link, alumno.nombre)
-                                    }
+                                    val link = generarEnlacePagoRealista(alumno)
+                                    compartirEnlace(ctx, link, alumno.nombre)
                                 }
                             ) {
                                 Text("Enviar enlace")
@@ -100,17 +96,10 @@ fun PagosScreen(
     }
 }
 
-/**
- * Enlace realista (demo).
- * Usamos un identificador estable para el link:
- * - si hay firebaseId -> lo usamos (cuando exista sync)
- * - si no hay -> usamos localId (versión básica Room)
- */
+// TODO: el monto por clase debería venir del perfil del profesor — pendiente para versión Pro
 fun generarEnlacePagoRealista(alumno: AlumnoEntity): String {
-    val montoClases = alumno.clasesPactadas * 8000
-
+    val montoClases = alumno.clasesPactadas * alumno.tarifaPorClase
     val idStable = alumno.firebaseId ?: alumno.localId.toString()
-
     return "https://pago.coachtrack.app/pay?" +
             "alumno=${alumno.nombre.replace(" ", "%20")}" +
             "&id=$idStable" +
@@ -122,11 +111,10 @@ fun compartirEnlace(context: android.content.Context, url: String, nombre: Strin
         action = Intent.ACTION_SEND
         putExtra(
             Intent.EXTRA_TEXT,
-            "Hola $nombre 👋\nAquí está tu enlace para pagar tus clases:\n$url"
+            "Hola $nombre, aquí está tu enlace para pagar tus clases:\n$url"
         )
         type = "text/plain"
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-
     context.startActivity(Intent.createChooser(intent, "Enviar enlace de pago"))
 }

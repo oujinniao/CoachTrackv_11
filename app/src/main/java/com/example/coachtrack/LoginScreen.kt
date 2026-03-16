@@ -12,13 +12,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import com.google.firebase.auth.ktx.auth
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-
     carteraViewModel: CarteraViewModel,
     onLoginSuccess: () -> Unit,
     onRegisterClick: () -> Unit
@@ -45,7 +42,6 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -93,10 +89,6 @@ fun LoginScreen(
                         .addOnCompleteListener { task ->
                             isLoading = false
                             if (task.isSuccessful) {
-
-                                carteraViewModel.iniciarSincronizacionInicial()
-
-                                // 2. Navegar
                                 onLoginSuccess()
                             } else {
                                 errorMessage = task.exception?.localizedMessage
@@ -126,7 +118,6 @@ fun LoginScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // MODO DEMO ANÓNIMO (Generalmente FREE o limitado)
             Text("¿Solo quieres probar la app?", style = MaterialTheme.typography.bodySmall)
 
             OutlinedButton(
@@ -137,8 +128,6 @@ fun LoginScreen(
                         .addOnCompleteListener { task ->
                             isLoading = false
                             if (task.isSuccessful) {
-
-                                carteraViewModel.iniciarSincronizacionInicial()
                                 onLoginSuccess()
                             } else {
                                 errorMessage = task.exception?.localizedMessage

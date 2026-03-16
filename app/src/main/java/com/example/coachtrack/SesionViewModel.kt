@@ -8,6 +8,7 @@ import com.example.coachtrack.data.repository.AlumnoRepositoryHibrido
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -73,4 +74,11 @@ class SesionViewModel(
             alumnoRepository.incrementarClasesCursadas(sesion.alumnoId)
         }
     }
+    // Agregar dentro de SesionViewModel
+    suspend fun generarNuevoSessionId(): Long {
+        val sesionesActuales = sesionesGenerales.first()
+        return (sesionesActuales.maxOfOrNull { it.id } ?: 0L) + 1L
+    }
+
+
 }

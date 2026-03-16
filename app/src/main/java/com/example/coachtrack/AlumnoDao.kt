@@ -18,28 +18,24 @@ interface AlumnoDao {
     @Query("SELECT * FROM alumnos WHERE localId = :id LIMIT 1")
     suspend fun getById(id: Long): AlumnoEntity?
 
-    // ✅ Necesaria para desasignar alumnos cuando se elimina un profesor
     @Query("SELECT * FROM alumnos WHERE profesorInstructor = :profesorId")
     suspend fun getAlumnosByProfesorId(profesorId: Long): List<AlumnoEntity>
 
     @Query("SELECT * FROM alumnos WHERE telefono = :telefono LIMIT 1")
     suspend fun getByTelefono(telefono: String): AlumnoEntity?
 
-
-    // ✅ Necesaria para evitar duplicación en sincronización Cloud→Room
     @Query("SELECT localId FROM alumnos WHERE firebaseId = :firebaseId LIMIT 1")
     suspend fun getLocalIdByFirebaseId(firebaseId: String): Long?
 
     // -----------------------------
     // ESCRITURAS
     // -----------------------------
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(alumno: AlumnoEntity): Long
 
     @Update
     suspend fun update(alumno: AlumnoEntity)
 
-    // ✅ “Upsert” manual: si localId==0 inserta, si no, actualiza y devuelve el id
     @Transaction
     suspend fun upsert(alumno: AlumnoEntity): Long {
         return if (alumno.localId == 0L) {
@@ -50,7 +46,6 @@ interface AlumnoDao {
         }
     }
 
-    // ✅ Para setear firebaseId después de crear el doc en Firestore
     @Query("UPDATE alumnos SET firebaseId = :firebaseId WHERE localId = :localId")
     suspend fun updateFirebaseId(localId: Long, firebaseId: String)
 

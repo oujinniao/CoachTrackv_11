@@ -16,11 +16,9 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,24 +29,20 @@ fun FichaAlumnoScreen(
     onNuevaSesionClick: (Alumnos) -> Unit,
     viewModel: FichaAlumnoViewModel = viewModel()
 ) {
-    // ---- Diálogos ----
     var showNuevaSesionDialog by rememberSaveable { mutableStateOf(false) }
     var showNuevaTacticaDialog by rememberSaveable { mutableStateOf(false) }
 
-    // ---- Carga ----
     LaunchedEffect(localId) {
         if (localId != 0L) viewModel.cargarAlumno(localId)
     }
 
-    // LiveData es Alumnos? -> en UI lo tratamos como nullable y damos fallback seguro
-    val alumnoNullable by viewModel.alumno.observeAsState(initial = null)
+    val alumnoNullable by viewModel.alumno.collectAsState()
 
     val alumnoState: Alumnos = alumnoNullable ?: Alumnos(
         localId = localId,
         nombre = "Cargando..."
     )
 
-    // Si me pasaron un ID real, pero todavía no cargó el alumno, muestro loader
     if (localId != 0L && alumnoNullable == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -58,7 +52,6 @@ fun FichaAlumnoScreen(
 
     var selectedTab by rememberSaveable { mutableStateOf(0) }
 
-    // Observar las listas (asumiendo que existen como StateFlow en tus VMs)
     val sesiones: List<SesionEntity> by viewModel.sesionViewModel.sesionesDelAlumno.collectAsState(
         initial = emptyList()
     )
@@ -82,8 +75,6 @@ fun FichaAlumnoScreen(
                 onClick = {
                     if (alumnoState.localId != 0L) {
                         showNuevaSesionDialog = true
-                        // si quieres seguir usando el callback externo:
-                        // onNuevaSesionClick(alumnoState)
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.primary
@@ -92,13 +83,11 @@ fun FichaAlumnoScreen(
             }
         }
     ) { padding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // ---------------- ENCABEZADO ----------------
             Text(
                 text = alumnoState.nombre,
                 style = MaterialTheme.typography.headlineSmall,
@@ -109,7 +98,6 @@ fun FichaAlumnoScreen(
                 textAlign = TextAlign.Center
             )
 
-            // ---------------- TABS ----------------
             val tabs = listOf("Resumen", "Sesiones", "Tácticas")
             TabRow(selectedTabIndex = selectedTab) {
                 tabs.forEachIndexed { index, title ->
@@ -122,33 +110,24 @@ fun FichaAlumnoScreen(
             }
 
             when (selectedTab) {
-                0 -> {
-                    TabResumen(
-                        alumno = alumnoState,
-                        onGuardarNotas = { nuevasNotas ->
-                            viewModel.actualizarNotas(alumnoState.localId, nuevasNotas)
-                        },
-                        onModificarClases = { nuevasClases ->
-                            viewModel.actualizarClasesCursadas(alumnoState.localId, nuevasClases)
-                        }
-                    )
-                }
-
-                1 -> {
-                    TabSesiones(sesiones = sesiones)
-                }
-
-                2 -> {
-                    TabTacticas(
-                        tacticas = tacticas,
-                        onNuevaTacticaClick = { showNuevaTacticaDialog = true }
-                    )
-                }
+                0 -> TabResumen(
+                    alumno = alumnoState,
+                    onGuardarNotas = { nuevasNotas ->
+                        viewModel.actualizarNotas(nuevasNotas)
+                    },
+                    onModificarClases = { nuevasClases ->
+                        viewModel.actualizarClasesCursadas( nuevasClases)
+                    }
+                )
+                1 -> TabSesiones(sesiones = sesiones)
+                2 -> TabTacticas(
+                    tacticas = tacticas,
+                    onNuevaTacticaClick = { showNuevaTacticaDialog = true }
+                )
             }
         }
     }
 
-    // ---------------- DIÁLOGOS ----------------
     if (showNuevaSesionDialog && alumnoState.localId != 0L) {
         DialogNuevaSesion(
             alumnoId = alumnoState.localId,
@@ -167,17 +146,12 @@ fun FichaAlumnoScreen(
     }
 }
 
-// ----------------------------------------------------
-// COMPONENTES MODULARIZADOS
-// ----------------------------------------------------
-
 @Composable
 fun TabResumen(
     alumno: Alumnos,
     onGuardarNotas: (String) -> Unit,
     onModificarClases: (Int) -> Unit
 ) {
-    // Estado local para notas (se reinicia cuando cambia el alumno)
     var notas by rememberSaveable(alumno.localId) { mutableStateOf(alumno.notasEntrenador) }
     var editandoNotas by rememberSaveable(alumno.localId) { mutableStateOf(false) }
 
@@ -192,13 +166,14 @@ fun TabResumen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Nivel Actual: ${alumno.nivelActual}", style = MaterialTheme.typography.titleMedium)
                     Text("Objetivo: ${alumno.objetivo ?: "—"}", style = MaterialTheme.typography.bodyMedium)
-                    Divider(Modifier.padding(vertical = 8.dp))
-
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     Text("Teléfono: ${alumno.datosPersonales.telefono}", style = MaterialTheme.typography.bodySmall)
                     Text("Dirección: ${alumno.datosPersonales.direccion}", style = MaterialTheme.typography.bodySmall)
                     Text("Estado de Pago: ${alumno.estadoPago.name}", style = MaterialTheme.typography.bodySmall)
@@ -218,14 +193,12 @@ fun TabResumen(
                 ) {
                     Text("Clases Pactadas: ${alumno.clasesPactadas}", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Clases Cursadas:", style = MaterialTheme.typography.titleLarge)
-
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
                                 onClick = {
@@ -237,14 +210,12 @@ fun TabResumen(
                             ) {
                                 Icon(Icons.Default.Remove, contentDescription = "Restar Clase")
                             }
-
                             Text(
                                 "${alumno.clasesCursadas}",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
-
                             IconButton(
                                 onClick = { onModificarClases(alumno.clasesCursadas + 1) }
                             ) {
@@ -269,11 +240,9 @@ fun TabResumen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Notas del Entrenador", style = MaterialTheme.typography.titleMedium)
-
                         IconButton(
                             onClick = {
                                 editandoNotas = !editandoNotas
-                                // Si estoy saliendo del modo edición -> guardo
                                 if (!editandoNotas) onGuardarNotas(notas)
                             }
                         ) {
@@ -283,9 +252,7 @@ fun TabResumen(
                             )
                         }
                     }
-
                     Spacer(Modifier.height(8.dp))
-
                     if (editandoNotas) {
                         OutlinedTextField(
                             value = notas,
@@ -299,7 +266,10 @@ fun TabResumen(
                         Text(
                             text = notas.ifEmpty { "No hay notas aún." },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (notas.isEmpty()) Color.Gray else Color.Unspecified
+                            color = if (notas.isEmpty())
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -319,7 +289,10 @@ fun TabSesiones(sesiones: List<SesionEntity>) {
         if (sesiones.isEmpty()) {
             item {
                 Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No hay sesiones registradas todavía.", color = Color.Gray)
+                    Text(
+                        "No hay sesiones registradas todavía.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         } else {
@@ -330,7 +303,6 @@ fun TabSesiones(sesiones: List<SesionEntity>) {
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
-
             items(sesiones, key = { it.id }) { sesion ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp)) {
@@ -363,7 +335,9 @@ fun TabTacticas(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
         ) {
             Icon(Icons.Default.Add, contentDescription = "Nueva Táctica")
             Spacer(Modifier.width(8.dp))
@@ -377,7 +351,10 @@ fun TabTacticas(
             if (tacticas.isEmpty()) {
                 item {
                     Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No hay tácticas registradas todavía.", color = Color.Gray)
+                        Text(
+                            "No hay tácticas registradas todavía.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             } else {
@@ -388,14 +365,13 @@ fun TabTacticas(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
-
                 items(tacticas, key = { it.localId }) { tactica ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 tactica.titulo,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
+                                style = MaterialTheme.typography.titleSmall
                             )
                             Text("Nivel: ${tactica.nivel}", style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.height(4.dp))

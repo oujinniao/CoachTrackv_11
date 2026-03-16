@@ -1,8 +1,6 @@
 package com.example.coachtrack
 
-import android.R.attr.padding
 import androidx.activity.compose.BackHandler
-import android.app.Application
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,58 +17,43 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.coachtrack.generarNuevoSessionId
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.collections.filter
-import kotlin.jvm.java
 
-
-
-private suspend fun generarNuevoSessionId(sesionViewModel: SesionViewModel): Long {
-    // 💡 Usamos .first() para obtener el valor actual del StateFlow una sola vez.
-    val sesionesActuales = sesionViewModel.sesionesGenerales.first()
-    return (sesionesActuales.maxOfOrNull { it.id } ?: 0L) + 1L
-}
-
-// -------------------- PANTALLA DE PLANIFICACIÓN --------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
-    //BackHandler {  onVolverClick()}
-
-
-
     val context = LocalContext.current
-    val application = context.applicationContext as Application
     val carteraViewModel: CarteraViewModel = viewModel()
-    val sesionRepository = remember { SesionRepository(application.applicationContext) }
+    val sesionRepository = remember {
+        val app = context.applicationContext as CoachTrackApplication
+        SesionRepository(app.container.db.sesionDao())
+    }
     val sesionViewModel: SesionViewModel = viewModel(
-          factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 if (modelClass.isAssignableFrom(SesionViewModel::class.java)) {
-                    return SesionViewModel(application, sesionRepository) as T
+                    return SesionViewModel(
+                        context.applicationContext as android.app.Application,
+                        sesionRepository
+                    ) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
         }
     )
 
-    // Obtenemos alumnos reales desde Room
     val alumnosRoom by carteraViewModel.alumnos.collectAsState(initial = emptyList())
 
-    // Convertimos AlumnoEntity → modelo Alumnos
     val alumnos: List<Alumnos> = alumnosRoom.map { entity ->
         Alumnos(
-
-            localId=entity.localId,
+            localId = entity.localId,
             nombre = entity.nombre,
             nivelActual = entity.nivelActual,
             objetivo = entity.objetivo,
@@ -94,16 +77,12 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
     var snackbarMessage by remember { mutableStateOf("") }
 
     BackHandler(enabled = true) {
-        if (plantillaSeleccionada != null) {
-            plantillaSeleccionada = null
-        } else if (alumnoSeleccionado != null) {
-            alumnoSeleccionado = null
-        } else {
-            onVolverClick()
+        when {
+            plantillaSeleccionada != null -> plantillaSeleccionada = null
+            alumnoSeleccionado != null -> alumnoSeleccionado = null
+            else -> onVolverClick()
         }
     }
-
-
 
     Scaffold(
         topBar = {
@@ -118,7 +97,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
         }
     ) { padding ->
 
-        // ----------- DETALLE DE PLANTILLA ---------
         if (plantillaSeleccionada != null) {
             PlantillaDetailScreen(
                 plantilla = plantillaSeleccionada!!,
@@ -136,19 +114,13 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-
-                // -----------------------------------
-                //        SELECCIÓN DE ALUMNO
-                // -----------------------------------
                 if (alumnoSeleccionado == null) {
 
-                    // ... (Cuerpo de selección de alumno se mantiene igual)
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
@@ -187,9 +159,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
                 } else {
 
-                    // -----------------------------------
-                    //       PLANIFICACIÓN DE SESIÓN
-                    // -----------------------------------
                     Text(
                         "Alumno: ${alumnoSeleccionado?.nombre}",
                         style = MaterialTheme.typography.titleMedium
@@ -197,7 +166,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
                     Spacer(Modifier.height(8.dp))
                     Text("Selecciona plantillas:", fontWeight = FontWeight.Bold)
-
                     Spacer(Modifier.height(8.dp))
 
                     LazyColumn(Modifier.weight(1f)) {
@@ -235,7 +203,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
 
                     Spacer(Modifier.height(8.dp))
 
-                    // Plantillas añadidas
                     if (sesionViewModel.sesionActual.isNotEmpty()) {
                         Card(
                             modifier = Modifier
@@ -263,7 +230,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                         }
                     }
 
-                    // -------- Botones inferiores ----------
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -284,12 +250,10 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                             onClick = {
                                 scope.launch {
                                     alumnoSeleccionado?.let { alumno ->
-
-                                        // 🎯 CORRECCIÓN: Usamos la función auxiliar corregida.
-                                        val newSessionId = generarNuevoSessionId(sesionViewModel)
+                                        val newSessionId = sesionViewModel.generarNuevoSessionId()
 
                                         val sesion = SesionDeClase(
-                                            sessionId = newSessionId, // Usamos el ID de tipo Long
+                                            sessionId = newSessionId,
                                             fechaCreacion = java.time.LocalDateTime.now()
                                                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                                             alumnoNombre = alumno.nombre,
@@ -297,21 +261,17 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                                             ejercicios = sesionViewModel.sesionActual.toMutableList()
                                         )
 
-                                        // 🎯 CORRECCIÓN: Convertimos alumno.id (String) a Long para la Entidad.
                                         val entidad = sesion.toEntity(
-                                            alumnoId = alumno.localId, // CORREGIDO: toLong()
+                                            alumnoId = alumno.localId,
                                             alumnoNombre = alumno.nombre
                                         )
 
-                                        // 💡 Usamos la función de SesionViewModel que incrementa el contador de clases.
                                         sesionViewModel.guardarNuevaSesion(entidad)
 
-                                        snackbarMessage = "✅ Sesión guardada para ${alumno.nombre}"
+                                        snackbarMessage = "Sesión guardada para ${alumno.nombre}"
                                         showSnackbar = true
-                                        scope.launch {
-                                            kotlinx.coroutines.delay(2500)
-                                            showSnackbar = false
-                                        }
+                                        delay(2500)
+                                        showSnackbar = false
 
                                         sesionViewModel.limpiarSesionActual()
                                         alumnoSeleccionado = null
@@ -327,7 +287,6 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                 }
             }
 
-            // ---------- Snackbar animado ------------
             AnimatedVisibility(
                 visible = showSnackbar,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -337,13 +296,13 @@ fun PlanificacionScreen(onVolverClick: () -> Unit) {
                     .padding(bottom = 32.dp)
             ) {
                 Surface(
-                    color = Color(0xFF4CAF50),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     shadowElevation = 10.dp,
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Text(
                         text = snackbarMessage,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                     )
                 }

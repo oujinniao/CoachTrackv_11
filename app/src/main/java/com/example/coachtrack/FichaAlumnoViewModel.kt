@@ -2,27 +2,23 @@ package com.example.coachtrack
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.coachtrack.data.repository.AlumnoRepositoryHibrido
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-
 
 class FichaAlumnoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repositoryHibrido: AlumnoRepositoryHibrido =
         (application as CoachTrackApplication).container.alumnoRepositoryHibrido
 
-    // 💡 NECESARIO: Inicializar SesionRepository para pasarlo al ViewModel
-    private val sesionRepository = SesionRepository(application.applicationContext)
+    private val sesionRepository = SesionRepository(
+        (application as CoachTrackApplication).container.db.sesionDao()
+    )
 
-
-    // 🎯 CORRECCIÓN: Pasamos el repositorio al constructor de SesionViewModel
     val sesionViewModel = SesionViewModel(application, sesionRepository)
-    // TacticaViewModel asume que el constructor con solo Application es suficiente.
     val tacticaViewModel = TacticaViewModel(application)
-
 
     // ----------------------------------------------------------------------
     // MAPEO ENTRE ENTIDAD (Room) Y MODELO (UI)
@@ -69,11 +65,10 @@ class FichaAlumnoViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     // ----------------------------------------------------------------------
-    // LIVE DATA PRINCIPAL
+    // STATE FLOW PRINCIPAL
     // ----------------------------------------------------------------------
-    private val _alumno = MutableLiveData<Alumnos?>(null)
-    val alumno: LiveData<Alumnos?> = _alumno
-
+    private val _alumno = MutableStateFlow<Alumnos?>(null)
+    val alumno: StateFlow<Alumnos?> = _alumno
 
     // ----------------------------------------------------------------------
     // CARGAR ALUMNO EXISTENTE
@@ -83,12 +78,8 @@ class FichaAlumnoViewModel(application: Application) : AndroidViewModel(applicat
 
         viewModelScope.launch {
             val entity = repositoryHibrido.getAlumnoLocalById(localId)
-
             entity?.let {
-                // Mapear la entidad de Room al modelo de UI
                 _alumno.value = mapEntityToUI(it)
-
-                // Cargar las subcolecciones
                 sesionViewModel.cargarSesiones(localId)
                 tacticaViewModel.cargarTacticas(localId)
             }
@@ -96,40 +87,28 @@ class FichaAlumnoViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     // ----------------------------------------------------------------------
-    // FUNCIONES DE ACTUALIZACIÓN DEL ESTADO LOCAL Y REPOSITORIO (NECESARIAS PARA LA UI)
+    // ACTUALIZACIÓN DE NOTAS
     // ----------------------------------------------------------------------
-
-    /**
-     * Actualiza solo las notas del entrenador y guarda en el repositorio.
-     */
-    fun actualizarNotas(localId: Long, nuevasNotas: String) {
+    fun actualizarNotas(nuevasNotas: String) {
         viewModelScope.launch {
             _alumno.value?.let { currentAlumno ->
-                // Actualizamos la copia local (UI Model)
                 val updatedAlumno = currentAlumno.copy(notasEntrenador = nuevasNotas)
                 _alumno.value = updatedAlumno
-
-                // Guardamos la ENTITY mapeada en el repositorio
                 repositoryHibrido.guardarAlumno(mapUIToEntity(updatedAlumno))
             }
         }
     }
 
-    /**
-     * Actualiza solo las clases cursadas y guarda en el repositorio.
-     */
-    fun actualizarClasesCursadas(localId: Long, nuevasClases: Int) {
+    // ----------------------------------------------------------------------
+    // ACTUALIZACIÓN DE CLASES CURSADAS
+    // ----------------------------------------------------------------------
+    fun actualizarClasesCursadas(nuevasClases: Int) {
         viewModelScope.launch {
             _alumno.value?.let { currentAlumno ->
-                // Actualizamos la copia local (UI Model)
                 val updatedAlumno = currentAlumno.copy(clasesCursadas = nuevasClases)
                 _alumno.value = updatedAlumno
-
-                // Guardamos la ENTITY mapeada en el repositorio
                 repositoryHibrido.guardarAlumno(mapUIToEntity(updatedAlumno))
             }
         }
     }
-
-    // ... Otras funciones de tu código original (guardarAlumno, actualizarDatosPersonales, etc.)
 }

@@ -1,19 +1,10 @@
 package com.example.coachtrack
 
-import android.content.Context
-import androidx.room.Room
+
 import kotlinx.coroutines.flow.Flow
 
 
-class SesionRepository(context: Context) {
-
-    private val db: CoachTrackDatabase = Room.databaseBuilder(
-        context.applicationContext,
-        CoachTrackDatabase::class.java,
-        "coachtrack_db"
-    ).build()
-
-    private val dao = db.sesionDao()
+class SesionRepository(private val dao: SesionDao) {
 
     fun getSesiones(): Flow<List<SesionEntity>> = dao.getAll()
 
@@ -26,3 +17,7 @@ class SesionRepository(context: Context) {
 
     suspend fun deleteAll() = dao.deleteAll()
 }
+
+//SesionRepository crea su propia instancia de Room igual que e AlumnoRepository.
+//La corrección es inyectarle el SesionDato desde AppContainer en lugar de
+// construir la BD internamente

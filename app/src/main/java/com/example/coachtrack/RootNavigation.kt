@@ -2,75 +2,64 @@ package com.example.coachtrack
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import androidx.compose.ui.platform.LocalContext
-import android.app.Application
-import androidx.lifecycle.viewmodel.compose.viewModel
+
+object RootRoutes {
+    const val SPLASH = "splash"
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val MAIN = "main"
+}
 
 @Composable
 fun RootNavigation(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val auth = Firebase.auth
-
-    val context = LocalContext.current
-    val application = context.applicationContext as Application
-
-    val carteraViewModel: CarteraViewModel = viewModel(
-        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
-            .getInstance(application)
-    )
+    val carteraViewModel: CarteraViewModel = viewModel()
 
     NavHost(
         navController = navController,
-        startDestination = "splash",
+        startDestination = RootRoutes.SPLASH,
         modifier = modifier
     ) {
 
-        // 1) SPLASH PRIMERO
-        composable("splash") {
+        composable(RootRoutes.SPLASH) {
             CoachTrackSplashScreen(
                 onSplashFinished = {
-                    val destino = if (auth.currentUser != null) {
-                        // Ya hay usuario (demo o con email)
-                        "main"
-                    } else {
-                        // No hay usuario → ir a login
-                        "login"
-                    }
+                    val destino = if (auth.currentUser != null) RootRoutes.MAIN
+                    else RootRoutes.LOGIN
 
                     navController.navigate(destino) {
-                        popUpTo("splash") { inclusive = true }
+                        popUpTo(RootRoutes.SPLASH) { inclusive = true }
                     }
                 }
             )
         }
 
-        // 2) LOGIN
-        composable("login") {
+        composable(RootRoutes.LOGIN) {
             LoginScreen(
                 carteraViewModel = carteraViewModel,
                 onLoginSuccess = {
-                    navController.navigate("main") {
-                        popUpTo("login") { inclusive = true }
+                    navController.navigate(RootRoutes.MAIN) {
+                        popUpTo(RootRoutes.LOGIN) { inclusive = true }
                     }
                 },
                 onRegisterClick = {
-                    navController.navigate("register")
+                    navController.navigate(RootRoutes.REGISTER)
                 }
             )
-
         }
 
-        // 3) REGISTER
-        composable("register") {
+        composable(RootRoutes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = {
-                    navController.navigate("main") {
-                        popUpTo("login") { inclusive = true }
+                    navController.navigate(RootRoutes.MAIN) {
+                        popUpTo(RootRoutes.LOGIN) { inclusive = true }
                     }
                 },
                 onBackToLogin = {
@@ -79,15 +68,13 @@ fun RootNavigation(modifier: Modifier = Modifier) {
             )
         }
 
-        // 4) MAIN (tu navegación interna con Splash anterior, Principal, Gestión, etc.)
-        composable("main") {
+        composable(RootRoutes.MAIN) {
             AppNavigation(
-                // 🎯 3. PASAR LA DEPENDENCIA A APPNAGIGATION (que la necesitará internamente)
-                carteraViewModel = carteraViewModel, // ¡Nueva dependencia requerida!
+                carteraViewModel = carteraViewModel,
                 onLogout = {
                     Firebase.auth.signOut()
-                    navController.navigate("login") {
-                        popUpTo("main") { inclusive = true }
+                    navController.navigate(RootRoutes.LOGIN) {
+                        popUpTo(RootRoutes.MAIN) { inclusive = true }
                     }
                 }
             )

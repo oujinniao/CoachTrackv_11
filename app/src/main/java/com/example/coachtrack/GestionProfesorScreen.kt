@@ -15,12 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlin.collections.filter
-import kotlin.collections.isNotEmpty
-import kotlin.collections.joinToString
 
 @Composable
 fun GestionProfesoresScreen(
@@ -29,7 +26,6 @@ fun GestionProfesoresScreen(
 ) {
     val profesores by viewModel.profesores.collectAsState()
     val alumnos by viewModel.alumnos.collectAsState()
-    // 🎯 CORRECCIÓN: Usar alumnosDisponibles en lugar de alumnos
     val alumnosDisponibles by viewModel.alumnosDisponibles.collectAsState()
 
     val showDialog = viewModel.mostrarDialogoAgregar.value
@@ -37,16 +33,8 @@ fun GestionProfesoresScreen(
 
     val state = ProfesorListState(
         profesores = profesores,
-        alumnosDisponibles = alumnos // Esto se mantiene para la lista de profesores
+        alumnosAsignados = alumnos
     )
-
-    BackHandler {
-        if (showDialog) {
-            viewModel.cerrarDialogoAgregar()
-        } else {
-            onVolverClick()
-        }
-    }
 
     GestionProfesoresScreenContent(
         state = state,
@@ -77,14 +65,13 @@ fun GestionProfesoresScreen(
 
 data class ProfesorListState(
     val profesores: List<ProfesorEntity> = emptyList(),
-    val alumnosDisponibles: List<AlumnoEntity> = emptyList()
+    val alumnosAsignados: List<AlumnoEntity> = emptyList()
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GestionProfesoresScreenContent(
     state: ProfesorListState,
-    // 🎯 CORRECCIÓN: Nuevo parámetro para alumnos disponibles
     alumnosDisponibles: List<AlumnoEntity>,
     onVolverClick: () -> Unit,
     onGuardarProfesor: (ProfesorEntity) -> Unit,
@@ -96,7 +83,6 @@ fun GestionProfesoresScreenContent(
     showDialog: Boolean,
     profesorAEditar: ProfesorEntity?
 ) {
-
     BackHandler(enabled = true) {
         if (showDialog) {
             onCerrarDialogo()
@@ -125,7 +111,9 @@ fun GestionProfesoresScreenContent(
 
         if (state.profesores.isEmpty()) {
             Box(
-                Modifier.fillMaxSize().padding(padding),
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -142,7 +130,9 @@ fun GestionProfesoresScreenContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(state.profesores, key = { it.id }) { profesor ->
-                    val alumnosAsignados = state.alumnosDisponibles.filter { it.profesorInstructor == profesor.id }
+                    val alumnosAsignados = state.alumnosAsignados.filter {
+                        it.profesorInstructor == profesor.id
+                    }
 
                     ProfesorCard(
                         profesor = profesor,
@@ -158,16 +148,16 @@ fun GestionProfesoresScreenContent(
         if (showDialog) {
             DialogAgregarProfesor(
                 profesorExistente = profesorAEditar,
-                // 🎯 CORRECCIÓN: Pasar alumnosDisponibles (solo los disponibles)
                 alumnosDisponibles = alumnosDisponibles,
                 onDismiss = onCerrarDialogo,
                 onGuardar = { profesor, alumnoAsignado ->
-                    if (profesor.id == 0L)
+                    if (profesor.id == 0L) {
                         onGuardarConAsignacion(profesor, alumnoAsignado)
-                    else {
+                    } else {
                         onGuardarProfesor(profesor)
-                        if (alumnoAsignado != null)
+                        if (alumnoAsignado != null) {
                             onGuardarConAsignacion(profesor, alumnoAsignado)
+                        }
                     }
                     onCerrarDialogo()
                 }
@@ -185,28 +175,29 @@ fun ProfesorCard(
     onDelete: (ProfesorEntity) -> Unit
 ) {
     Card(
-        Modifier.fillMaxWidth().clickable { onEdit(profesor) }
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEdit(profesor) }
     ) {
         Row(
-            Modifier.padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(profesor.nombre, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    profesor.nombre,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
                 Text("Especialidad: ${profesor.especialidad}")
-
-                if (alumnosAsignados.isNotEmpty()) {
-                    Text(
-                        "Alumnos: ${alumnosAsignados.joinToString { it.nombre }}",
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Text(
-                        "Alumnos asignados: $alumnosAsignadosCount",
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    if (alumnosAsignados.isNotEmpty())
+                        "Alumnos: ${alumnosAsignados.joinToString { it.nombre }}"
+                    else
+                        "Sin alumnos asignados aún",
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
             Row {

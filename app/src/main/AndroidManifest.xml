@@ -7,8 +7,9 @@
         android:required="false" />
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
         android:name=".CoachTrackApplication"
@@ -19,13 +20,13 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
+        android:resizeableActivity="true"
         android:theme="@style/Theme.CoachTrack">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
-            android:screenOrientation="fullSensor"
             android:theme="@style/Theme.CoachTrack">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -33,7 +34,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 👇 Este bloque DEBE ir dentro del <application> -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

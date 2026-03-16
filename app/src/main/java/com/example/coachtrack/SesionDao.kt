@@ -3,8 +3,6 @@ package com.example.coachtrack
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
-import kotlin.collections.List
-
 @Dao
 interface SesionDao {
 
@@ -12,9 +10,9 @@ interface SesionDao {
     fun getAll(): Flow<List<SesionEntity>>
 
     @Query("SELECT * FROM sesiones WHERE alumnoId = :alumnoId ORDER BY fecha DESC")
-    fun getSesionesPorAlumno(alumnoId: Long): Flow<List<SesionEntity>> // 💡 CORREGIDO: De Int a Long
+    fun getSesionesPorAlumno(alumnoId: Long): Flow<List<SesionEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(sesion: SesionEntity)
 
     @Delete

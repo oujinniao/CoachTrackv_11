@@ -3,49 +3,40 @@ package com.example.coachtrack
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.coachtrack.BotonFuncionalidad
-import com.example.coachtrack.TopAppBarPrincipal
-
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.filled.EventNote
-import androidx.compose.material.icons.filled.ManageAccounts
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Campaign
-
-
 
 @Composable
 fun PantallaPrincipal(
     onPlanificarClick: () -> Unit,
     onGestionClick: () -> Unit,
     onVideoAnalisisClick: () -> Unit,
-    onDashboardClick:()-> Unit,
+    onDashboardClick: () -> Unit,
     userId: String,
     onCerrarSesion: (() -> Unit)? = null
 ) {
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
 
-    // 🔹 ViewModel del perfil del profesor
     val perfilViewModel: PerfilProfesorViewModel = viewModel()
     val perfil by perfilViewModel.perfil.collectAsState()
 
-    // 🔹 Control del diálogo para editar el perfil
     var mostrarDialogoPerfil by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopAppBarPrincipal() }
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -54,10 +45,6 @@ fun PantallaPrincipal(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            //------------------------------------
-            // CARD DATOS ENTRENADOR (DINÁMICA)
-            //------------------------------------
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -69,11 +56,7 @@ fun PantallaPrincipal(
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        // Nombre del profesor
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (perfil.nombreProfesor.isNotBlank())
                                 "Prof. ${perfil.nombreProfesor}"
@@ -82,8 +65,6 @@ fun PantallaPrincipal(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
-
-                        // Academia / club
                         Text(
                             text = if (perfil.academia.isNotBlank())
                                 perfil.academia
@@ -91,21 +72,7 @@ fun PantallaPrincipal(
                                 "Añade tu academia / club",
                             style = MaterialTheme.typography.bodyMedium
                         )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // ID de usuario (prefiere el guardado, si no, el que viene por parámetro)
-                        val uidToShow = perfil.userId.ifBlank { userId }
-                        if (uidToShow.isNotBlank()) {
-                            Text(
-                                "ID Usuario: $uidToShow",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
                     }
-
-                    // Botón para editar el perfil
                     IconButton(onClick = { mostrarDialogoPerfil = true }) {
                         Icon(
                             imageVector = Icons.Default.Edit,
@@ -115,57 +82,34 @@ fun PantallaPrincipal(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            //------------------------------------
-            // BOTÓN PLANIFICAR SESIÓN
-            //------------------------------------
             BotonFuncionalidad(
-                icon=Icons.Default.EventNote,
+                icon = Icons.Default.EventNote,
                 texto = "PLANIFICAR SESIÓN",
                 descripcion = "Crea tu clase en 2 clics",
                 onClick = onPlanificarClick
             )
 
-            //Spacer(modifier = Modifier.height(16.dp))
-
-            //------------------------------------
-            // BOTÓN GESTIÓN
-            //------------------------------------
             BotonFuncionalidad(
-                icon= Icons.Default.ManageAccounts,
+                icon = Icons.Default.ManageAccounts,
                 texto = "GESTIÓN",
                 descripcion = "Alumnos, historial, profesores, pagos",
                 onClick = onGestionClick
             )
 
-            //Spacer(modifier = Modifier.height(16.dp))
-
-            //------------------------------------
-           // BOTÓN DASHBOARD
-           //------------------------------------
             BotonFuncionalidad(
-                icon= Icons.Default.Dashboard,
+                icon = Icons.Default.Dashboard,
                 texto = "DASHBOARD",
                 descripcion = "Resumen de alumnos, pagos y clases",
                 onClick = onDashboardClick
             )
 
-            //------------------------------------
-            // BOTÓN MARKETING
-            //------------------------------------
             BotonFuncionalidad(
-                icon= Icons.Default.Campaign,
+                icon = Icons.Default.Campaign,
                 texto = "MARKETING / PORTAFOLIO",
                 descripcion = "Graba y envía feedback visual",
                 onClick = onVideoAnalisisClick
             )
 
-           // Spacer(modifier = Modifier.height(40.dp))
-
-            //------------------------------------
-            // BOTÓN CERRAR SESIÓN
-            //------------------------------------
             OutlinedButton(
                 onClick = { mostrarDialogoCerrarSesion = true },
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -180,9 +124,6 @@ fun PantallaPrincipal(
                 Text("Cerrar sesión", fontWeight = FontWeight.Bold)
             }
 
-            //------------------------------------
-            // DIÁLOGO CONFIRMACIÓN CERRAR SESIÓN
-            //------------------------------------
             if (mostrarDialogoCerrarSesion) {
                 AlertDialog(
                     onDismissRequest = { mostrarDialogoCerrarSesion = false },
@@ -193,7 +134,10 @@ fun PantallaPrincipal(
                             mostrarDialogoCerrarSesion = false
                             onCerrarSesion?.invoke()
                         }) {
-                            Text("Sí, salir", color = Color.Red)
+                            Text(
+                                "Sí, salir",
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     },
                     dismissButton = {
@@ -206,9 +150,6 @@ fun PantallaPrincipal(
         }
     }
 
-    //------------------------------------
-    // DIÁLOGO EDITAR PERFIL PROFESOR
-    //------------------------------------
     if (mostrarDialogoPerfil) {
         DialogEditarPerfilProfesor(
             perfilActual = perfil,
@@ -257,7 +198,6 @@ fun BotonFuncionalidad(
                 modifier = Modifier.size(28.dp)
             )
             Spacer(modifier = Modifier.width(14.dp))
-
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center

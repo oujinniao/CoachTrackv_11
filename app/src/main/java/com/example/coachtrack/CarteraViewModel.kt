@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import kotlin.concurrent.timer
 
 
 class CarteraViewModel(application: Application) : AndroidViewModel(application) {
@@ -25,10 +27,10 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
 
     // 2. Lógica de Suscripción (Controla FREE vs. PRO)
     // NOTA: En producción, esto se obtendría del perfil de Firebase.
-    // Por ahora, lo establecemos como PRO para probar la sincronización.
-    var isProUser by mutableStateOf(true)
+//cuando el profesor pague,Firebase actualiza el valor a True
+    var isProUser by mutableStateOf(false)
 
-// ... (El resto del código es correcto y se mantiene igual) ...
+
 
     private val MAX_ALUMNOS_FREE = 20
 
@@ -70,7 +72,8 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
         repository.isCloudSyncEnabled = isProUser
 
         if (!isProUser) {
-            println("Usuario FREE: No se ejecuta sincronización con la nube (Función PRO).")
+            //println("Usuario FREE: No se ejecuta sincronización con la nube (Función PRO).")
+            Timber.d("Usuario FREE: No se ejecuta sincronización con la nube (Función PRO).")
             return
         }
 
@@ -79,7 +82,8 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
             try {
                 // 2. Ejecuta la recuperación (Cloud -> Room)
                 repository.sincronizarCloudARoom()
-                println("✅ Recuperación de datos PRO completada con éxito.")
+               // println("✅ Recuperación de datos PRO completada con éxito.")
+                Timber.d("✅ Recuperación de datos PRO completada con éxito.")
             } catch (e: Exception) {
                 _error.value = "Error al sincronizar datos iniciales: ${e.message}. Trabajando con datos locales."
             }
@@ -152,7 +156,8 @@ class CarteraViewModel(application: Application) : AndroidViewModel(application)
         // NOTA: Esta función debe ser implementada en el repositorio si deseas eliminar todo,
         // incluyendo todos los registros de la nube si el usuario es PRO.
         viewModelScope.launch {
-            println("⚠️ eliminarTodos() llamado. Necesita implementación en el repositorio para eliminar Room y Cloud (si es PRO).")
+           // println("⚠️ eliminarTodos() llamado. Necesita implementación en el repositorio para eliminar Room y Cloud (si es PRO).")
+            Timber.w("⚠️ eliminarTodos() llamado. Necesita implementación en el repositorio para eliminar Room y Cloud (si es PRO).")
         }
     }
 

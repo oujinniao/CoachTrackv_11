@@ -1,9 +1,9 @@
 package com.example.coachtrack
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,7 +37,7 @@ fun CoachTrackSplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF2762A4)),
+            .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -69,18 +68,17 @@ fun CoachTrackSplashScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "CoachTrack",
-                        color = Color.White,
-                        fontSize = 42.sp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Planea menos, enseña más",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
                     )
                 }
             }

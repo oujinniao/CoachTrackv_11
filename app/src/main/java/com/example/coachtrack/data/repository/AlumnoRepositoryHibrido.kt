@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import kotlin.jvm.java
 
 private const val ALUMNOS_COLLECTION = "alumnos"
@@ -31,7 +32,7 @@ class AlumnoRepositoryHibrido(
     private val tacticaDao: TacticaDao
 ) {
 
-    private val TAG = "AlumnoRepoHibrido"
+    //private val TAG = "AlumnoRepoHibrido"
     var isCloudSyncEnabled: Boolean = false
 
     private val alumnosCollection get() = firestore.collection(ALUMNOS_COLLECTION)
@@ -46,7 +47,7 @@ class AlumnoRepositoryHibrido(
 
     suspend fun guardarSesion(sesion: SesionEntity) = withContext(Dispatchers.IO) {
         sesionDao.insert(sesion)
-        Log.d(TAG, "Sesión guardada para alumnoId=${sesion.alumnoId}")
+        Timber.d( "Sesión guardada para alumnoId=${sesion.alumnoId}")
     }
 
     suspend fun guardarAlumno(alumno: AlumnoEntity) = withContext(Dispatchers.IO) {
@@ -110,7 +111,7 @@ class AlumnoRepositoryHibrido(
             alumnoDao.updateFirebaseId(localId, firestoreId)
         }
 
-        Log.d(TAG, "Alumno sincronizado: ${savedLocal.nombre}")
+        Timber.d( "Alumno sincronizado: ${savedLocal.nombre}")
     }
 
     suspend fun incrementarClasesCursadas(alumnoLocalId: Long) = withContext(Dispatchers.IO) {
@@ -121,15 +122,15 @@ class AlumnoRepositoryHibrido(
 
     suspend fun eliminarAlumno(alumno: AlumnoEntity) = withContext(Dispatchers.IO) {
         alumnoDao.delete(alumno)
-        Log.d(TAG, "Alumno eliminado de Room: ${alumno.nombre}")
+        Timber.d( "Alumno eliminado de Room: ${alumno.nombre}")
 
         if (!isCloudSyncEnabled || alumno.firebaseId == null) return@withContext
 
         try {
             alumnosCollection.document(alumno.firebaseId).delete().await()
-            Log.d(TAG, "Alumno eliminado de Cloud")
+            Timber.d( "Alumno eliminado de Cloud")
         } catch (e: Exception) {
-            Log.e(TAG, "Error al eliminar en Cloud: ${e.message}")
+            Timber.e( "Error al eliminar en Cloud: ${e.message}")
         }
     }
 
@@ -161,7 +162,7 @@ class AlumnoRepositoryHibrido(
             alumnoDao.upsert(entityToUpsert)
         }
 
-        Log.d(TAG, "Sincronización Cloud → Room completada")
+        Timber.d( "Sincronización Cloud → Room completada")
     }
 
     fun getTacticasPorAlumno(alumnoLocalId: Long): Flow<List<TacticaEntity>> {

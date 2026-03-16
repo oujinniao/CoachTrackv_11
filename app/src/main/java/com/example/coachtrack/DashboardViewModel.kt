@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import timber.log.Timber
 
 enum class DashboardFiltro { TODOS, AL_DIA, PENDIENTE, DEUDA }
 
@@ -58,5 +59,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setFiltro(nuevo: DashboardFiltro) {
         _filtro.value = nuevo
+        Timber.d("Filtro cambiado a: $nuevo")
     }
 }

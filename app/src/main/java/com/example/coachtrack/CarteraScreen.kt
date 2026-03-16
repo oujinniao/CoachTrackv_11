@@ -1,6 +1,5 @@
 package com.example.coachtrack
 
-import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,13 +18,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
-// ✅ Deja SOLO una definición. (Elimina el import com.example.coachtrack.MAX_ALUMNOS_FREE si lo tenías)
 private const val MAX_ALUMNOS_FREE = 20
 
-// ----------------------------------------------------
-// Snackbar con estilo por resultado
-// ----------------------------------------------------
 private enum class SnackbarTipo { EXITO, ERROR }
 
 private data class SnackbarEvento(
@@ -39,17 +35,14 @@ fun CarteraScreen(
     onVolver: () -> Unit,
     onAbrirFichaAlumno: (AlumnoEntity) -> Unit
 ) {
-    val TAG = "CarteraScreen"
-
     val auth = Firebase.auth
     var authState by remember { mutableStateOf(auth.currentUser) }
 
-    // 💡 AuthStateListener con DisposableEffect
     val authListener = remember {
         FirebaseAuth.AuthStateListener { firebaseAuth ->
             authState = firebaseAuth.currentUser
             if (authState == null) {
-                Log.d(TAG, "Usuario desconectado, AuthState actualizado.")
+                Timber.d("Usuario desconectado, AuthState actualizado.")
             }
         }
     }
@@ -61,7 +54,6 @@ fun CarteraScreen(
 
     when {
         authState == null -> {
-            // ------- SIN USUARIO AUTENTICADO -------
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -77,10 +69,8 @@ fun CarteraScreen(
         }
 
         else -> {
-            // ------- USUARIO AUTENTICADO -------
             val carteraViewModel: CarteraViewModel = viewModel()
 
-            // 1) Estados
             val alumnos by carteraViewModel.alumnos.collectAsState()
             val isLoading by carteraViewModel.isLoading.collectAsState()
             val errorMessage by carteraViewModel.error.collectAsState()
@@ -91,15 +81,14 @@ fun CarteraScreen(
             val snackbarHostState = remember { SnackbarHostState() }
             val scope = rememberCoroutineScope()
 
-            // ✅ Estado para saber si el Snackbar es éxito o error (para pintarlo)
             var snackbarEvento by remember { mutableStateOf<SnackbarEvento?>(null) }
 
-            // 2) Sincronización inicial
+            val emailUsuario = authState?.email ?: authState?.uid?.take(12) ?: ""
+
             LaunchedEffect(Unit) {
                 carteraViewModel.iniciarSincronizacionInicial()
             }
 
-            // 3) Mostrar errores del ViewModel (rojo)
             LaunchedEffect(errorMessage) {
                 if (errorMessage != null) {
                     snackbarEvento = SnackbarEvento(
@@ -145,34 +134,30 @@ fun CarteraScreen(
                         },
                         actions = {
                             Text(
-                                text = "👤 ${authState!!.uid.take(6)}...",
+                                text = "👤 $emailUsuario",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                         }
                     )
                 },
-
-                // ✅ SnackbarHost custom (verde éxito / rojo error)
                 snackbarHost = {
                     SnackbarHost(hostState = snackbarHostState) { data ->
                         val tipo = snackbarEvento?.tipo ?: SnackbarTipo.EXITO
-
                         Snackbar(
                             snackbarData = data,
                             containerColor = when (tipo) {
-                                SnackbarTipo.EXITO -> Color(0xFFE8F5E9) // verde suave
+                                SnackbarTipo.EXITO -> MaterialTheme.colorScheme.secondaryContainer
                                 SnackbarTipo.ERROR -> MaterialTheme.colorScheme.errorContainer
                             },
                             contentColor = when (tipo) {
-                                SnackbarTipo.EXITO -> Color(0xFF1B5E20) // texto verde oscuro
+                                SnackbarTipo.EXITO -> MaterialTheme.colorScheme.onSecondaryContainer
                                 SnackbarTipo.ERROR -> MaterialTheme.colorScheme.onErrorContainer
                             }
                         )
                     }
                 },
-
                 floatingActionButton = {
                     FloatingActionButton(
                         onClick = { carteraViewModel.abrirDialogoAgregar() },
@@ -194,14 +179,15 @@ fun CarteraScreen(
                         .padding(paddingValues)
                         .padding(horizontal = 16.dp)
                 ) {
-
-                    // Tarjeta de Estado (Autenticación y Subscripción)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isProUser) Color(0xFFE8F5E9) else Color(0xFFFFFDE7)
+                            containerColor = if (isProUser)
+                                MaterialTheme.colorScheme.secondaryContainer
+                            else
+                                MaterialTheme.colorScheme.tertiaryContainer
                         )
                     ) {
                         Row(
@@ -211,33 +197,40 @@ fun CarteraScreen(
                             Icon(
                                 if (isProUser) Icons.Default.Verified else Icons.Default.StarBorder,
                                 contentDescription = "Estado",
-                                tint = if (isProUser) Color.Green else Color(0xFFFFC107),
+                                tint = if (isProUser)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    if (isProUser) "✅ Subscripción PRO Activa" else "★ Versión Básica (FREE)",
+                                    if (isProUser) "Subscripción PRO Activa" else "Versión Básica (FREE)",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isProUser) Color.Green else Color(0xFFFFC107)
+                                    color = if (isProUser)
+                                        MaterialTheme.colorScheme.onSecondaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onTertiaryContainer
                                 )
                                 Text(
-                                    "ID: ${authState!!.uid.take(12)}...",
+                                    emailUsuario,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
 
-                    // Bloque de límite alcanzado
                     if (limiteAlcanzado) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp),
@@ -259,7 +252,6 @@ fun CarteraScreen(
                         }
                     }
 
-                    // Lista / estados
                     if (isLoading) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -275,7 +267,7 @@ fun CarteraScreen(
                             Text(
                                 "No hay alumnos aún. Usa el botón (+) para empezar.",
                                 textAlign = TextAlign.Center,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     } else {
@@ -284,7 +276,6 @@ fun CarteraScreen(
                             modifier = Modifier.padding(vertical = 8.dp),
                             style = MaterialTheme.typography.titleMedium
                         )
-
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 80.dp)
@@ -295,43 +286,32 @@ fun CarteraScreen(
                                     onEdit = { carteraViewModel.abrirDialogoAgregar(alumno) },
                                     onClick = { onAbrirFichaAlumno(alumno) }
                                 )
-                                Divider()
+                                HorizontalDivider()
                             }
                         }
                     }
                 }
 
-                // ----------------------------------------------------
-                // DIÁLOGO AGREGAR/EDITAR
-                // ----------------------------------------------------
                 if (carteraViewModel.mostrarDialogoAgregar) {
                     DialogAgregarAlumno(
                         alumnoExistente = carteraViewModel.alumnoEnEdicion,
                         onDismiss = { carteraViewModel.cerrarDialogoAgregar() },
                         onGuardar = { alumno ->
                             carteraViewModel.agregarOActualizarAlumno(alumno) { exito, fueActualizacion ->
-
-                                // ✅ Para que el Snackbar NO quede “detrás” del diálogo:
-                                // cerramos primero en éxito. (Si quieres cerrar también en error, cambia la condición.)
                                 if (exito) {
                                     carteraViewModel.cerrarDialogoAgregar()
                                 }
-
                                 scope.launch {
                                     val evento = when {
                                         !exito && carteraViewModel.error.value != null ->
                                             SnackbarEvento(carteraViewModel.error.value!!, SnackbarTipo.ERROR)
-
                                         !exito ->
                                             SnackbarEvento("No se pudo guardar (duplicado o error).", SnackbarTipo.ERROR)
-
                                         fueActualizacion ->
                                             SnackbarEvento("Alumno actualizado correctamente.", SnackbarTipo.EXITO)
-
                                         else ->
                                             SnackbarEvento("Alumno agregado correctamente.", SnackbarTipo.EXITO)
                                     }
-
                                     snackbarEvento = evento
                                     snackbarHostState.showSnackbar(evento.mensaje)
                                     carteraViewModel.limpiarError()
@@ -345,9 +325,6 @@ fun CarteraScreen(
     }
 }
 
-// ----------------------------------------------------
-// Item de alumno
-// ----------------------------------------------------
 @Composable
 fun AlumnoListItem(
     alumno: AlumnoEntity,
@@ -359,7 +336,9 @@ fun AlumnoListItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier
@@ -374,7 +353,6 @@ fun AlumnoListItem(
                 modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     alumno.nombre,
@@ -384,10 +362,9 @@ fun AlumnoListItem(
                 Text(
                     "Clases Cursadas: ${alumno.clasesCursadas}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = "Editar Alumno")
             }
